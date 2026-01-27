@@ -81,6 +81,108 @@ web_fetch url=https://seekingalpha.com/symbol/TICKER
 3. 保存完整版到 `~/clawd/newsletters/YYYY-MM-DD-full.md`
 4. 发送摘要给用户
 
+### Step 6: 生成 NotebookLM Video Overview 🎬
+
+完成文档生成后，提炼美股热点信息并生成视频摘要。
+
+#### 6.1 提取美股热点内容
+
+从完整版中提取最吸引人的美股相关信息，生成独立的 source 文件：
+
+```bash
+# 保存提炼后的美股热点
+~/clawd/newsletters/YYYY-MM-DD-stocks-highlights.md
+```
+
+**提取内容包括：**
+- Grok 美股分析 Top 5（完整内容）
+- OpenAI 热点公司分析
+- 财报速递（如有）
+- 板块热度榜 + 逻辑判断
+- Daily Market Pulse 核心观点
+
+**提取原则：**
+- 只保留美股相关内容（排除 AI Dev 技术类）
+- 保留具体数据、ticker、催化剂
+- 确保内容连贯、有洞察力
+
+#### 6.2 创建 NotebookLM Notebook
+
+```bash
+# CLI 路径
+NOTEBOOKLM=/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm
+
+# 创建当日 notebook
+$NOTEBOOKLM create "美股日报 YYYY-MM-DD"
+
+# 获取 notebook ID 并设为当前
+$NOTEBOOKLM use <notebook_id>
+```
+
+#### 6.3 添加 Source
+
+```bash
+# 添加提炼后的美股热点文件
+$NOTEBOOKLM source add ~/clawd/newsletters/YYYY-MM-DD-stocks-highlights.md
+```
+
+#### 6.4 生成 Video Overview
+
+```bash
+# 生成视频（可选样式：classic, whiteboard, kawaii, anime 等）
+$NOTEBOOKLM generate video --style classic --wait
+
+# 或使用 Python API
+python3 << 'EOF'
+import asyncio
+from notebooklm import NotebookLMClient
+
+async def generate_video(notebook_id: str, output_path: str):
+    async with await NotebookLMClient.from_storage() as client:
+        status = await client.artifacts.generate_video(
+            notebook_id,
+            style="classic",  # 可选: whiteboard, kawaii, anime
+        )
+        await client.artifacts.wait_for_completion(notebook_id, status.task_id)
+        await client.artifacts.download_video(notebook_id, output_path)
+        print(f"Video saved to {output_path}")
+
+asyncio.run(generate_video("<notebook_id>", "~/clawd/newsletters/YYYY-MM-DD-video.mp4"))
+EOF
+```
+
+#### 6.5 下载视频
+
+```bash
+# 下载到 newsletters 目录
+$NOTEBOOKLM download video ~/clawd/newsletters/YYYY-MM-DD-video.mp4
+```
+
+#### 6.6 输出文件
+
+| 文件 | 路径 | 说明 |
+|------|------|------|
+| 美股热点源文件 | `~/clawd/newsletters/YYYY-MM-DD-stocks-highlights.md` | NotebookLM source |
+| Video Overview | `~/clawd/newsletters/YYYY-MM-DD-video.mp4` | 生成的视频摘要 |
+
+---
+
+## NotebookLM 配置
+
+- **CLI 路径**: `/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm`
+- **认证**: `~/.notebooklm/storage_state.json`
+- **首次登录**: 运行 `notebooklm login` 完成 Google 账户授权
+
+### 首次设置
+
+```bash
+# 1. 登录（会打开浏览器）
+/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm login
+
+# 2. 验证登录成功
+/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm list
+```
+
 ---
 
 ## 输出格式规范

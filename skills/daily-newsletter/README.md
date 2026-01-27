@@ -12,23 +12,25 @@ skills/daily-newsletter/
 
 ## 输出文件
 
-每天生成两个版本：
+每天生成四个文件：
 
 ```
 ~/clawd/newsletters/
-├── 2026-01-26.md          # 简版 - 摘要快速浏览
-├── 2026-01-26-full.md     # 完整版 - 所有详细内容
-├── 2026-01-27.md
-├── 2026-01-27-full.md
+├── 2026-01-26.md                    # 简版 - 摘要快速浏览
+├── 2026-01-26-full.md               # 完整版 - 所有详细内容
+├── 2026-01-26-stocks-highlights.md  # 美股热点提炼 (NotebookLM source)
+├── 2026-01-26-video.mp4             # Video Overview (NotebookLM 生成)
 └── ...
 ```
 
-### 简版 vs 完整版
+### 文件说明
 
-| 版本 | 内容 | 用途 |
+| 文件 | 内容 | 用途 |
 |------|------|------|
 | 简版 `.md` | 要点摘要、核心数据、作业清单 | 每日快速扫描 |
 | 完整版 `-full.md` | 完整分析、代码示例、详细财务数据 | 深度研究 |
+| 美股热点 `-stocks-highlights.md` | 提炼的美股信息 | NotebookLM source |
+| Video Overview `-video.mp4` | AI 生成的视频摘要 | 快速了解当日美股热点 |
 
 ## 内容覆盖
 
@@ -91,6 +93,20 @@ cat ~/clawd/newsletters/2026-01-26.md
 - Clawdbot browser 工具 (页面抓取)
 - 已登录的 `clawd` 浏览器 profile (Grok + ChatGPT)
 - `web_fetch` (补充数据获取)
+- `notebooklm-py` (Video Overview 生成)
+
+### NotebookLM 设置
+
+```bash
+# 安装
+pip3 install "notebooklm-py[browser]"
+
+# 首次登录（打开浏览器授权）
+/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm login
+
+# 验证
+/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm list
+```
 
 ## 配置
 
