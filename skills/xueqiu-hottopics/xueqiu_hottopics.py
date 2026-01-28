@@ -39,7 +39,7 @@ INTERNAL_API_KEY = os.environ.get('INTERNAL_API_KEY', '')
 XUEQIU_COOKIE_PATH = Path("/Users/xuemeizhao/Downloads/add-caption/social_uploader/xueqiu_uploader/xueqiu_account.json")
 
 # AI 模型配置
-GEMINI_MODEL = "gemini-2.5-pro-preview-05-06"
+GEMINI_MODEL = "gemini-2.5-pro"
 
 # ============== 日志工具 ==============
 
