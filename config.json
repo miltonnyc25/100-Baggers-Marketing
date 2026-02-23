@@ -1,0 +1,28 @@
+{
+  "reportSource": "~/Downloads/InvestView_v0/public/reports",
+  "productionUrl": "https://www.100baggers.club",
+  "platforms": {
+    "xueqiu": {
+      "enabled": true,
+      "language": "zh"
+    },
+    "xiaohongshu": {
+      "enabled": true,
+      "language": "zh"
+    },
+    "twitter": {
+      "enabled": true,
+      "language": "en"
+    },
+    "youtube": {
+      "enabled": true,
+      "language": "zh"
+    }
+  },
+  "availableReports": [
+    "tsla", "amd", "cost", "pg", "googl",
+    "msft", "orcl", "aapl", "tsm", "amzn",
+    "meta", "lrcx", "rblx", "asml", "pltr",
+    "amat", "klac", "etn", "smci"
+  ]
+}
