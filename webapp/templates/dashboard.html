@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - 100Baggers Review{% endblock %}
+
+{% block content %}
+<h1>Content Review Dashboard</h1>
+
+<!-- New Session Form -->
+<article>
+    <header>Create New Session</header>
+    <form method="post" action="{{ url_for('create_session') }}" id="create-session-form">
+        <div class="grid">
+            <label>
+                Ticker
+                <select name="ticker" required>
+                    <option value="" disabled selected>Select ticker...</option>
+                    {% for t in tickers %}
+                    <option value="{{ t }}">{{ t | upper }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                Platform
+                <select name="platform" required>
+                    {% for p in platforms %}
+                    <option value="{{ p }}">{{ p | title }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <button type="submit" id="create-session-btn">Create Session</button>
+    </form>
+</article>
+
+<!-- Active Sessions -->
+{% if sessions %}
+<h2>Sessions</h2>
+<div class="overflow-auto">
+    <table>
+        <thead>
+            <tr>
+                <th>Ticker</th>
+                <th>Platform</th>
+                <th>Status</th>
+                <th>Segments</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sessions %}
+            <tr>
+                <td><strong>{{ s.ticker | upper }}</strong></td>
+                <td>{{ s.platform | title }}</td>
+                <td>
+                    <span class="status-badge status-{{ s.overall_status }}">
+                        {{ s.overall_status }}
+                    </span>
+                </td>
+                <td>{{ s.approved_count() }}/{{ s.total_count() }} approved</td>
+                <td>{{ s.created_at[:16] }}</td>
+                <td>
+                    <a href="{{ url_for('view_session', session_id=s.session_id) }}" role="button" class="outline">
+                        Open
+                    </a>
+                    <form method="post" action="{{ url_for('delete_session', session_id=s.session_id) }}" style="display:inline">
+                        <button type="submit" class="outline secondary btn-sm"
+                                onclick="return confirm('Delete this session?')">
+                            Delete
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No sessions yet. Create one above to get started.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,97 @@
+<article class="segment-card segment-{{ segment.status }}">
+    <header>
+        <div class="segment-header">
+            <div>
+                <strong>{{ segment.title }}</strong>
+                <small>{{ segment.theme }} &bull; {{ segment.word_count }} words &bull; {{ segment.source_chapter_ids | length }} chapters</small>
+            </div>
+            <div class="segment-actions">
+                <span class="status-badge status-{{ segment.status }}">{{ segment.status }}</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Editor -->
+    <details {% if segment.status == 'draft' %}open{% endif %}>
+        <summary>Content</summary>
+        <form hx-post="{{ url_for('save_segment', session_id=session.session_id, segment_id=segment.segment_id) }}"
+              hx-target="#card-{{ segment.segment_id }}"
+              hx-swap="innerHTML">
+            <textarea name="content" rows="12" class="content-editor">{{ formatted }}</textarea>
+            <div class="editor-actions">
+                <button type="submit" class="outline">Save</button>
+                <button type="button" class="outline secondary"
+                        hx-post="{{ url_for('regenerate_segment', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                        hx-target="#card-{{ segment.segment_id }}"
+                        hx-swap="innerHTML"
+                        hx-confirm="Regenerate content? Current edits will be lost.">
+                    Regenerate
+                </button>
+                <button type="button"
+                        class="{% if segment.status == 'approved' %}secondary{% endif %}"
+                        hx-post="{{ url_for('approve_segment', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                        hx-target="#card-{{ segment.segment_id }}"
+                        hx-swap="innerHTML">
+                    {% if segment.status == 'approved' %}Unapprove{% else %}Approve{% endif %}
+                </button>
+            </div>
+        </form>
+    </details>
+
+    <!-- Screenshots -->
+    {% if segment.screenshots %}
+    <details open>
+        <summary>Screenshots ({{ segment.screenshots | length }})</summary>
+        <div class="screenshot-row" style="display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 0;">
+            {% for url in segment.screenshots %}
+            <div class="screenshot-item" style="position: relative;">
+                <img src="{{ url }}" alt="Report chart" style="max-width: 300px; max-height: 200px; border: 1px solid var(--pico-muted-border-color); border-radius: 4px;">
+                <button type="button" class="outline secondary screenshot-remove"
+                        style="position: absolute; top: 2px; right: 2px; padding: 2px 6px; font-size: 0.7rem;"
+                        onclick="this.parentElement.remove()">X</button>
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+
+    <!-- Source Content (collapsed) -->
+    <details>
+        <summary>Source Markdown ({{ segment.word_count }} words)</summary>
+        <pre class="source-preview"><code>{{ segment.content_markdown[:3000] }}{% if segment.content_markdown | length > 3000 %}...{% endif %}</code></pre>
+    </details>
+
+    <!-- Video Section -->
+    <details>
+        <summary>
+            Video
+            {% if segment.video_status == 'ready' %} &#10003;
+            {% elif segment.video_status == 'generating' %} (generating...)
+            {% elif segment.video_status == 'failed' %} &#10007;
+            {% endif %}
+        </summary>
+        <div class="video-section" id="video-{{ segment.segment_id }}">
+            {% if segment.video_status == 'ready' and segment.video_path %}
+                <video controls width="100%">
+                    <source src="{{ segment.video_path }}" type="video/mp4">
+                </video>
+            {% elif segment.video_status == 'generating' %}
+                <p aria-busy="true">Generating video...</p>
+                <div hx-get="{{ url_for('video_status', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                     hx-trigger="every 5s"
+                     hx-swap="none"
+                     class="video-poll">
+                </div>
+            {% elif segment.video_status == 'failed' %}
+                <p>Video generation failed.</p>
+            {% endif %}
+            {% if segment.video_status != 'generating' %}
+            <button class="outline"
+                    hx-post="{{ url_for('generate_video', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                    hx-swap="none">
+                {% if segment.video_status == 'failed' %}Retry{% else %}Generate{% endif %} Video
+            </button>
+            {% endif %}
+        </div>
+    </details>
+</article>

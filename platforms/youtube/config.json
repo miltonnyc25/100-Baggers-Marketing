@@ -1,0 +1,17 @@
+{
+  "platform": "youtube",
+  "language": "en",
+  "script_min_minutes": 5,
+  "script_max_minutes": 15,
+  "title_max_chars": 100,
+  "description_max_words": 120,
+  "tone": "educational_narrative",
+  "thumbnail": {
+    "size": [1280, 720],
+    "style": "dark_gradient_with_ticker"
+  },
+  "compliance": {
+    "required_disclaimer": "Disclaimer: This video is for educational purposes only and does not constitute investment advice.",
+    "attribution": "Data source: 100baggers.club deep research reports"
+  }
+}

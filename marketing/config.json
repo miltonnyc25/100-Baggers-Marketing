@@ -1,28 +1,32 @@
 {
   "reportSource": "~/Downloads/InvestView_v0/public/reports",
   "productionUrl": "https://www.100baggers.club",
+  "buildingBlocks": "~/clawd/skills",
   "platforms": {
     "xueqiu": {
       "enabled": true,
-      "language": "zh"
+      "language": "zh",
+      "configPath": "../platforms/xueqiu/config.json"
     },
     "xiaohongshu": {
       "enabled": true,
-      "language": "zh"
+      "language": "zh",
+      "configPath": "../platforms/xiaohongshu/config.json"
     },
     "twitter": {
       "enabled": true,
-      "language": "en"
+      "language": "en",
+      "configPath": "../platforms/twitter/config.json"
     },
     "youtube": {
       "enabled": true,
-      "language": "zh"
+      "language": "en",
+      "configPath": "../platforms/youtube/config.json"
     }
   },
   "availableReports": [
-    "tsla", "amd", "cost", "pg", "googl",
-    "msft", "orcl", "aapl", "tsm", "amzn",
-    "meta", "lrcx", "rblx", "asml", "pltr",
-    "amat", "klac", "etn", "smci"
+    "aapl", "amat", "amd", "amzn", "anet", "app", "asml", "cost",
+    "etn", "googl", "klac", "lrcx", "meta", "msft", "mu", "orcl",
+    "pg", "pltr", "rblx", "rddt", "smci", "sofi", "tsla", "tsm", "vrt"
   ]
 }

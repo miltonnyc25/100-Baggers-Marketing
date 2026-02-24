@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Edit: {{ segment.title }}{% endblock %}
+
+{% block nav_right %}
+<a href="{{ url_for('view_session', session_id=session.session_id) }}">Back to Session</a>
+{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>{{ segment.title }}</h1>
+    <p>
+        {{ session.ticker | upper }} / {{ session.platform | title }}
+        &bull; <span class="status-badge status-{{ segment.status }}">{{ segment.status }}</span>
+        &bull; {{ segment.word_count }} words from {{ segment.source_chapter_ids | length }} chapters
+    </p>
+</hgroup>
+
+<div class="grid">
+    <!-- Editor (left/main) -->
+    <div>
+        <article>
+            <header>Platform Content</header>
+            <form hx-post="{{ url_for('save_segment', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                  hx-target="#save-feedback"
+                  hx-swap="innerHTML">
+                <textarea name="content" rows="24" class="content-editor" id="main-editor">{{ formatted }}</textarea>
+                <div class="editor-actions">
+                    <button type="submit">Save</button>
+                    <button type="button" class="outline secondary"
+                            hx-post="{{ url_for('regenerate_segment', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                            hx-target="#save-feedback"
+                            hx-swap="innerHTML"
+                            hx-confirm="Regenerate? Current edits will be lost.">
+                        Regenerate
+                    </button>
+                    <button type="button"
+                            class="{% if segment.status == 'approved' %}secondary{% endif %}"
+                            hx-post="{{ url_for('approve_segment', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                            hx-target="#save-feedback"
+                            hx-swap="innerHTML">
+                        {% if segment.status == 'approved' %}Unapprove{% else %}Approve{% endif %}
+                    </button>
+                </div>
+                <div id="save-feedback"></div>
+            </form>
+        </article>
+    </div>
+
+    <!-- Source reference (right/side) -->
+    <div>
+        <article>
+            <header>Source Report Content</header>
+            <pre class="source-preview"><code>{{ segment.content_markdown[:5000] }}{% if segment.content_markdown | length > 5000 %}
+...truncated...{% endif %}</code></pre>
+        </article>
+
+        {% if segment.tables %}
+        <article>
+            <header>Tables ({{ segment.tables | length }})</header>
+            {% for tbl in segment.tables[:5] %}
+            <pre><code>{{ tbl }}</code></pre>
+            {% endfor %}
+        </article>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

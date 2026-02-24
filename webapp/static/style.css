@@ -1,0 +1,127 @@
+/* 100Baggers Review - custom styles on top of Pico CSS */
+
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.status-splitting  { background: #e2e8f0; color: #475569; }
+.status-generating { background: #fef3c7; color: #92400e; }
+.status-reviewing  { background: #dbeafe; color: #1e40af; }
+.status-approved   { background: #d1fae5; color: #065f46; }
+.status-published  { background: #c4b5fd; color: #5b21b6; }
+.status-draft      { background: #f1f5f9; color: #64748b; }
+.status-rejected   { background: #fecaca; color: #991b1b; }
+.status-failed     { background: #fecaca; color: #991b1b; }
+
+/* Segment cards */
+.segment-card {
+    border-left: 4px solid var(--pico-muted-border-color);
+    margin-bottom: 1.5rem;
+}
+.segment-card.segment-approved {
+    border-left-color: #10b981;
+}
+.segment-card.segment-published {
+    border-left-color: #8b5cf6;
+}
+.segment-card.segment-rejected {
+    border-left-color: #ef4444;
+}
+
+.segment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+.segment-header small {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--pico-muted-color);
+}
+
+.segment-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* Content editor */
+.content-editor {
+    font-family: var(--pico-font-family-monospace, monospace);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    min-height: 200px;
+    resize: vertical;
+}
+
+.editor-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+.editor-actions button {
+    width: auto;
+    margin-bottom: 0;
+}
+
+/* Source preview */
+.source-preview {
+    max-height: 400px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+}
+
+/* Publish bar */
+.publish-bar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--pico-card-background-color);
+    border-radius: var(--pico-border-radius);
+    flex-wrap: wrap;
+}
+.publish-bar button {
+    width: auto;
+    margin-bottom: 0;
+}
+
+/* Small buttons */
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* Video section */
+.video-section {
+    padding: 0.5rem 0;
+}
+.video-section video {
+    border-radius: var(--pico-border-radius);
+    margin-bottom: 0.75rem;
+}
+
+/* Table overflow */
+.overflow-auto {
+    overflow-x: auto;
+}
+
+/* HTMX loading indicator */
+.htmx-request {
+    opacity: 0.6;
+    transition: opacity 200ms;
+}
+.htmx-request button[type="submit"] {
+    pointer-events: none;
+}

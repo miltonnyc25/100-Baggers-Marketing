@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ session.ticker | upper }} / {{ session.platform | title }} - Review{% endblock %}
+
+{% block nav_right %}
+<a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>{{ session.ticker | upper }} &mdash; {{ session.platform | title }}</h1>
+    <p>
+        <span class="status-badge status-{{ session.overall_status }}">{{ session.overall_status }}</span>
+        &bull; {{ session.approved_count() }}/{{ session.total_count() }} segments approved
+        {% set total_imgs = session.segments | map(attribute='screenshots') | map('length') | sum %}
+        {% if total_imgs %}&bull; {{ total_imgs }} screenshots{% endif %}
+        &bull; Created {{ session.created_at[:16] }}
+    </p>
+</hgroup>
+
+<!-- Publish bar -->
+{% if session.approved_count() > 0 %}
+<div class="publish-bar">
+    <button id="publish-btn" class="contrast"
+            hx-post="{{ url_for('publish_session', session_id=session.session_id) }}"
+            hx-vals='{"dry_run": "true"}'
+            hx-target="#publish-result"
+            hx-swap="innerHTML">
+        Dry-Run Publish ({{ session.approved_count() }} segments)
+    </button>
+    <button class="secondary"
+            hx-post="{{ url_for('publish_session', session_id=session.session_id) }}"
+            hx-vals='{"dry_run": "false"}'
+            hx-target="#publish-result"
+            hx-swap="innerHTML"
+            hx-confirm="Publish for real? This will post to {{ session.platform | title }}.">
+        Publish Live
+    </button>
+    <div id="publish-result"></div>
+</div>
+{% endif %}
+
+<!-- Segment Cards -->
+{% for segment in session.segments %}
+<div id="card-{{ segment.segment_id }}">
+    {% with formatted=formatted[segment.segment_id] %}
+    {% include "_segment_card.html" %}
+    {% endwith %}
+</div>
+{% endfor %}
+{% endblock %}

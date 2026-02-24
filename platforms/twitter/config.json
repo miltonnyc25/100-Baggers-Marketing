@@ -1,0 +1,12 @@
+{
+  "platform": "twitter",
+  "language": "en",
+  "post_min_words": 300,
+  "post_max_words": 500,
+  "tone": "data_forward_conversational",
+  "compliance": {
+    "forbidden_words": ["overvalued", "undervalued", "buy", "sell", "hold", "bullish", "bearish", "price target"],
+    "required_cta": "Data: https://www.100baggers.club/reports/{ticker}"
+  },
+  "hashtags": []
+}

@@ -1,49 +1,141 @@
-# clawd-workspace
+# 100Baggers Report Marketing System
 
-Workspace for 100Baggers.club automation: content marketing, platform publishing, and daily workflows.
+Report → Content Extraction → Platform Content Generation → Publishing pipeline
+for 100Baggers.club deep research reports.
 
 ## Repository Structure
 
 ```
-clawd-workspace/
-├── skills/            # Shared infrastructure — verified publishing tools
-├── marketing/         # Content marketing — ideation, publishing, analytics
-└── newsletters/       # Daily newsletter digests
+100-Baggers-Marketing/
+├── CLAUDE.md                      # This file
+├── engine/                        # Content extraction engine
+│   ├── config.py                  # Paths, API URLs, ticker list
+│   ├── report_schema.py           # ReportData dataclass
+│   ├── segment_schema.py          # SegmentData dataclass
+│   ├── segment_splitter.py        # chapters → 3-5 themed segments
+│   ├── segment_generator.py       # segment → mini-ReportData → platform generator
+│   ├── markdown_parser.py         # Primary: .md report parser
+│   └── report_parser.py           # Fallback: HTML parser
+│
+├── platforms/                     # Per-platform content generators
+│   ├── xueqiu/                    # 雪球 — long-form analysis posts
+│   ├── xiaohongshu/               # 小红书 — slide decks + captions
+│   ├── twitter/                   # X/Twitter — English long-form posts
+│   └── youtube/                   # YouTube — video scripts + descriptions
+│   (each contains: generate.py, publish.py, prompt.md, template.md, config.json, archive/)
+│
+├── orchestrate.py                 # CLI: one-command cross-platform pipeline
+│
+├── webapp/                        # Content review + publishing web UI
+│   ├── app.py                     # Flask app (python webapp/app.py)
+│   ├── state.py                   # Session JSON persistence
+│   ├── notebooklm.py              # Per-segment video generation
+│   ├── templates/                 # Jinja2 templates (Pico CSS + HTMX)
+│   ├── static/                    # CSS + JS
+│   └── sessions/                  # Session JSON files (gitignored)
+│
+├── marketing/                     # Editorial pipeline + analytics
+│   ├── CLAUDE.md                  # Marketing guidelines
+│   ├── config.json                # Platform config
+│   ├── ideas/                     # backlog + pipeline
+│   └── analytics/                 # Performance tracking
+│
+└── newsletters/                   # Daily newsletter digests
 ```
 
-- **`skills/`** is the tool layer — reusable, battle-tested scripts for each platform
-- **`marketing/`** and **`newsletters/`** are business layers that consume skills
+## Quick Start
 
-## Skills Reuse (CRITICAL)
+```bash
+# List available report tickers
+python orchestrate.py --list
 
-**Always use existing skills and their components. Never start from scratch when a solution exists in `skills/`.**
+# Generate content for all platforms (dry-run)
+python orchestrate.py SMCI
 
-### Available Skills
+# Generate only for Xueqiu
+python orchestrate.py SMCI --platforms xueqiu
 
-| Skill | Path | Purpose |
-|-------|------|---------|
-| **xiaohongshu-publish** | `skills/xiaohongshu-publish/` | Video publishing to Xiaohongshu (cover gen, stealth, auto-upload) |
-| **xiaohongshu-slides** | `skills/xiaohongshu-slides/` | Multi-image slide deck publishing to Xiaohongshu |
-| **xueqiu-hottopics** | `skills/xueqiu-hottopics/` | Stock comment generation & publishing to Xueqiu |
-| **youtube-auth** | `skills/youtube-auth/` | YouTube OAuth credential management |
-| **youtube-daily-news** | `skills/youtube-daily-news/` | Video uploading to YouTube via API |
-| **daily-newsletter** | `skills/daily-newsletter/` | Email digest extraction & NotebookLM video generation |
+# Generate + publish (live)
+python orchestrate.py SMCI --publish
 
-### Reuse Rules
+# Batch: all tickers, all platforms
+python orchestrate.py --all
+```
 
-1. **Check `skills/` first** — Before building any workflow, read the relevant `SKILL.md`.
-2. **Share components** — Reuse existing scripts even if you don't use a full skill end-to-end:
-   - Cover generation → `skills/xiaohongshu-publish/generate_cover.py`
-   - Stealth anti-detection → `skills/xiaohongshu-publish/inject_stealth.js`
-   - XHS publisher → `skills/xiaohongshu-publish/xhs_publisher.py`
-   - XHS slides → `skills/xiaohongshu-slides/xhs_slides_publisher.py`
-   - Xueqiu comments → `skills/xueqiu-hottopics/xueqiu_hottopics.py`
-   - YouTube uploader → `skills/youtube-daily-news/youtube_publisher.py`
-   - YouTube OAuth → `skills/youtube-auth/youtube_auth.py`
-   - Email fetching → `skills/daily-newsletter/fetch-emails.sh`
-3. **Single source of truth** — Update components in `skills/`, all consumers benefit.
-4. **Extend, don't duplicate** — Add parameters/config to existing scripts rather than copying.
-5. **New tools → `skills/`** — Any new platform automation must be added as a skill with its own `SKILL.md`.
+## Web Review UI
+
+```bash
+# Install Flask (only new dependency)
+pip install flask
+
+# Start the review server
+python webapp/app.py
+
+# Open http://localhost:5000
+# 1. Select ticker + platform → creates segmented session
+# 2. Review & edit each segment inline
+# 3. Generate NotebookLM videos per segment
+# 4. Approve segments → publish (dry-run first)
+```
+
+## Architecture
+
+### Data Flow
+
+```
+InvestView_v0/public/reports/{ticker}/*.md
+         │
+         ▼
+    engine/ (parse → ReportData)
+         │
+    ┌────┼────┬────────┐
+    ▼    ▼    ▼        ▼
+ xueqiu  xhs  twitter  youtube   ← platforms/*/generate.py
+    │    │    │        │
+    ▼    ▼    ▼        ▼
+ archive/  (content files)
+    │    │    │        │
+    ▼    ▼    ▼        ▼
+ publish   publish  publish  publish  ← platforms/*/publish.py
+    │    │    │        │
+    ▼    ▼    ▼        ▼
+ clawd-workspace skills (building blocks)
+```
+
+### Segmented Flow (Web UI)
+
+```
+ReportData (engine)
+    │
+    ▼
+segment_splitter.py → 3-5 SegmentData per platform
+    │
+    ▼
+segment_generator.py → mini-ReportData → existing generators
+    │
+    ▼
+webapp/app.py → review, edit, approve in browser
+    │
+    ├── notebooklm.py → per-segment video generation
+    └── publish → approved segments to platforms
+```
+
+### Building Blocks (External — DO NOT copy into this repo)
+
+Publishing infrastructure lives in the **clawd-workspace** repo (`~/clawd/skills/`).
+Platform generators call these as building blocks via subprocess or imports.
+
+| Building Block | Location | Used By |
+|---------------|----------|---------|
+| XHS publisher | `~/clawd/skills/xiaohongshu-publish/` | platforms/xiaohongshu/ |
+| XHS slides | `~/clawd/skills/xiaohongshu-slides/` | platforms/xiaohongshu/ |
+| Xueqiu publisher | `~/clawd/skills/xueqiu-hottopics/` | platforms/xueqiu/ |
+| X/Twitter publisher | `~/clawd/skills/x-hottopics/` | platforms/twitter/ |
+| YouTube publisher | `~/clawd/skills/youtube-daily-news/` | platforms/youtube/ |
+| Earnings video pipeline | `~/clawd/skills/earnings-video/` | platforms/youtube/ |
+| Cover generator | `~/clawd/skills/superamy-cover/` | platforms/xiaohongshu/ |
+| YouTube OAuth | `~/clawd/skills/youtube-auth/` | platforms/youtube/ |
+| Social uploaders | `~/Downloads/add-caption/social_uploader/` | all platforms |
 
 ### Shared Infrastructure
 
@@ -52,12 +144,15 @@ clawd-workspace/
 | Python venv | `~/Downloads/add-caption/venv/` |
 | Stealth JS | `~/Downloads/add-caption/social_uploader/utils/stealth.min.js` |
 | Logo | `~/Downloads/add-caption/assets/100bagersclub_logo.png` |
-| XHS cookies | `skills/xiaohongshu-publish/cookies/` |
-| YouTube OAuth | `skills/youtube-auth/youtube_oauth.txt` |
+| XHS cookies | `~/clawd/skills/xiaohongshu-publish/cookies/` |
+| X cookies | `~/Downloads/add-caption/social_uploader/x_uploader/x_account.json` |
+| Xueqiu cookies | `~/Downloads/add-caption/social_uploader/xueqiu_uploader/xueqiu_account.json` |
+| YouTube OAuth | `~/clawd/skills/youtube-auth/youtube_oauth.txt` |
+| Report source | `~/Downloads/InvestView_v0/public/reports/` |
 
 ## Content Rules
 
-- Never fabricate data — all numbers must trace back to source
+- Never fabricate data — all numbers must trace back to source reports
 - Never include investment advice or price targets
 - Always disclose AI-generated nature where platform requires it
-- Reuse existing skills and components — never start from scratch
+- Each platform has its own compliance rules in `platforms/*/config.json`
