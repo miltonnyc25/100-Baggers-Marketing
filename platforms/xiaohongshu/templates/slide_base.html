@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1080">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px;
+    height: 1440px;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: #f0e6d3;
+    overflow: hidden;
+  }
+
+  .slide {
+    width: 1080px;
+    height: 1440px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 88px 44px 68px;
+  }
+
+  .slide-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, #0d0d0d 0%, #1a1a2e 40%, #16213e 100%);
+    z-index: 0;
+  }
+
+  .accent-bar {
+    position: absolute;
+    left: 0;
+    top: 80px;
+    bottom: 80px;
+    width: 10px;
+    background: linear-gradient(180deg, #d4af37 0%, #b8860b 100%);
+    border-radius: 0 5px 5px 0;
+    z-index: 1;
+  }
+
+  .header {
+    position: absolute;
+    top: 36px;
+    left: 44px;
+    right: 44px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 2;
+  }
+  .header-brand {
+    font-size: 36px;
+    font-weight: 600;
+    color: #d4af37;
+    letter-spacing: 0.05em;
+  }
+  .header-ticker {
+    font-size: 32px;
+    color: #8a8a9a;
+    font-weight: 400;
+  }
+
+  .footer {
+    position: absolute;
+    bottom: 32px;
+    left: 44px;
+    right: 44px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 2;
+  }
+  .footer-url {
+    font-size: 28px;
+    color: #555566;
+    letter-spacing: 0.02em;
+  }
+  .footer-page {
+    font-size: 28px;
+    color: #555566;
+  }
+
+  /* ── Content area ── */
+  .content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+  }
+
+  /* =====================================================================
+     CSS Component Library
+     ===================================================================== */
+
+  /* ── Typography ── */
+  .title {
+    font-size: 62px;
+    font-weight: 700;
+    color: #f0e6d3;
+    line-height: 1.25;
+    margin-bottom: 28px;
+  }
+
+  .subtitle {
+    font-size: 48px;
+    color: #8a8a9a;
+    line-height: 1.4;
+  }
+
+  .body-text {
+    font-size: 40px;
+    line-height: 1.5;
+    color: #e0d6c3;
+  }
+
+  .muted {
+    font-size: 34px;
+    color: #666678;
+    line-height: 1.45;
+  }
+
+  .footnote {
+    font-size: 30px;
+    color: #666678;
+    text-align: right;
+    margin-top: 24px;
+  }
+
+  /* ── Big numbers (cover hooks, highlight data) ── */
+  .big-number {
+    font-size: 148px;
+    font-weight: 800;
+    color: #d4af37;
+    line-height: 1.05;
+    margin-bottom: 8px;
+    word-break: break-all;
+  }
+
+  .big-number-label {
+    font-size: 38px;
+    color: #8a8a9a;
+    letter-spacing: 0.03em;
+    margin-bottom: 36px;
+  }
+
+  /* Smaller variant for side panels */
+  .big-number-sm {
+    font-size: 88px;
+    font-weight: 800;
+    color: #d4af37;
+    line-height: 1.05;
+    margin-bottom: 12px;
+    white-space: nowrap;
+  }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-block;
+    font-size: 48px;
+    font-weight: 700;
+    color: #d4af37;
+    border: 3px solid #d4af37;
+    border-radius: 14px;
+    padding: 12px 44px;
+    margin-bottom: 28px;
+    letter-spacing: 0.1em;
+  }
+
+  /* ── Bullet list ── */
+  .bullet-list {
+    list-style: none;
+  }
+
+  .bullet-item {
+    font-size: 40px;
+    line-height: 1.4;
+    color: #e0d6c3;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    padding-left: 32px;
+    position: relative;
+  }
+
+  .bullet-item:last-child {
+    border-bottom: none;
+  }
+
+  .bullet-item::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 28px;
+    width: 12px;
+    height: 12px;
+    background: #d4af37;
+    border-radius: 50%;
+  }
+
+  /* ── Layout: centered ── */
+  .centered {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Layout: two-col ── */
+  .two-col {
+    display: flex;
+    gap: 24px;
+    width: 100%;
+  }
+
+  .two-col > * {
+    flex: 1;
+  }
+
+  /* ── Layout: side-by-side (number left, content right) ── */
+  .side-layout {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .side-left {
+    flex: 0 0 260px;
+    text-align: center;
+    padding-top: 12px;
+  }
+
+  .side-right {
+    flex: 1;
+  }
+
+  /* Slightly smaller bullets inside side-layout to avoid excessive wrapping */
+  .side-right .bullet-item {
+    font-size: 37px;
+  }
+  .side-right .title {
+    font-size: 56px;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: rgba(212, 175, 55, 0.05);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 16px;
+  }
+
+  .card:last-child {
+    margin-bottom: 0;
+  }
+
+  .card-green {
+    background: rgba(34, 197, 94, 0.06);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 20px;
+    padding: 28px 24px;
+  }
+
+  .card-red {
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 20px;
+    padding: 28px 24px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  /* ── Card content items ── */
+  .card-item {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .card-item:last-child {
+    border-bottom: none;
+  }
+
+  .card-item-label {
+    flex: 1;
+    font-size: 40px;
+    font-weight: 600;
+    color: #f0e6d3;
+    line-height: 1.35;
+  }
+
+  .card-item-value {
+    flex: 0 0 auto;
+    font-size: 48px;
+    font-weight: 800;
+    color: #d4af37;
+    text-align: center;
+    min-width: 160px;
+  }
+
+  .card-item-note {
+    flex: 1;
+    font-size: 36px;
+    color: #8a8a9a;
+    text-align: right;
+    line-height: 1.35;
+  }
+
+  /* ── Callout box (for VS comparisons) ── */
+  .callout {
+    flex: 1;
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 20px;
+    padding: 36px 20px;
+    text-align: center;
+  }
+
+  .callout-number {
+    font-size: 100px;
+    font-weight: 800;
+    color: #d4af37;
+    line-height: 1.05;
+    margin-bottom: 12px;
+  }
+
+  .callout-label {
+    font-size: 36px;
+    color: #8a8a9a;
+    letter-spacing: 0.03em;
+  }
+
+  .vs-divider {
+    flex: 0 0 auto !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: 700;
+    color: rgba(212, 175, 55, 0.4);
+    align-self: center;
+  }
+
+  /* ── Data table ── */
+  .data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .data-table thead th {
+    font-size: 34px;
+    font-weight: 600;
+    color: #8a8a9a;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 20px 16px;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+    text-align: left;
+  }
+
+  .data-table thead th:nth-child(2),
+  .data-table thead th:nth-child(3) {
+    text-align: right;
+  }
+
+  .data-table tbody td {
+    font-size: 40px;
+    padding: 28px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .data-table .metric-name {
+    font-weight: 600;
+    color: #f0e6d3;
+  }
+
+  .data-table .metric-value {
+    text-align: right;
+    font-weight: 700;
+    color: #d4af37;
+    font-size: 44px;
+  }
+
+  .data-table .metric-change {
+    text-align: right;
+    font-weight: 600;
+    font-size: 36px;
+  }
+
+  /* ── Colors: positive/negative ── */
+  .positive { color: #22c55e; }
+  .negative { color: #ef4444; }
+
+  .icon-bull {
+    font-size: 48px;
+    color: #22c55e;
+  }
+
+  .icon-bear {
+    font-size: 48px;
+    color: #ef4444;
+  }
+
+  .title-green {
+    font-size: 48px;
+    font-weight: 700;
+    color: #22c55e;
+  }
+
+  .title-red {
+    font-size: 48px;
+    font-weight: 700;
+    color: #ef4444;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    flex: 0 0 2px !important;
+    width: 2px;
+    background: linear-gradient(180deg, transparent 0%, #d4af37 30%, #d4af37 70%, transparent 100%);
+    align-self: stretch;
+  }
+
+  .divider-h {
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent 0%, #d4af37 30%, #d4af37 70%, transparent 100%);
+    margin: 28px 0;
+  }
+
+  /* ── Section title (large centered) ── */
+  .section-title {
+    font-size: 62px;
+    font-weight: 700;
+    color: #f0e6d3;
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  /* ── Gold button (CTA) ── */
+  .gold-button {
+    display: inline-block;
+    font-size: 44px;
+    font-weight: 600;
+    color: #0d0d0d;
+    background: linear-gradient(135deg, #d4af37, #f0c75e);
+    padding: 26px 64px;
+    border-radius: 48px;
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    margin-bottom: 32px;
+  }
+
+  /* ── Column point (for bull/bear lists) ── */
+  .column-point {
+    font-size: 36px;
+    line-height: 1.35;
+    color: #e0d6c3;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-left: 22px;
+    position: relative;
+  }
+
+  .column-point:last-child {
+    border-bottom: none;
+  }
+
+  .column-point::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .card-green .column-point::before {
+    background: #22c55e;
+  }
+
+  .card-red .column-point::before {
+    background: #ef4444;
+  }
+
+  /* ── Spacer utilities ── */
+  .mb-sm { margin-bottom: 16px; }
+  .mb-md { margin-bottom: 28px; }
+  .mb-lg { margin-bottom: 44px; }
+  .mb-xl { margin-bottom: 60px; }
+  .mt-md { margin-top: 28px; }
+  .mt-lg { margin-top: 44px; }
+
+  /* ── Cover-specific: large title ── */
+  .title-xl {
+    font-size: 88px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #f0e6d3;
+    max-width: 960px;
+    margin: 0 auto 24px;
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="slide-bg"></div>
+  <div class="accent-bar"></div>
+
+  <div class="header">
+    <span class="header-brand">100Baggers.Club</span>
+    <span class="header-ticker">深度研报</span>
+  </div>
+
+  <div class="content">
+    {{CONTENT}}
+  </div>
+
+  <div class="footer">
+    <span class="footer-url">100baggers.club/zh/reports/{{TICKER_LOWER}}</span>
+    <span class="footer-page">{{SLIDE_NUMBER}} / {{TOTAL_SLIDES}}</span>
+  </div>
+</div>
+</body>
+</html>

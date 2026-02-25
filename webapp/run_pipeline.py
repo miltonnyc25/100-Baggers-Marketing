@@ -8,8 +8,9 @@ Steps:
   3. Auto-select best angle
   4. Curate document (Gemini)
   5. Generate video (NotebookLM)
-  6. Generate XHS post content
-  7. Archive everything
+  6. Generate XHS slides (Gemini + Playwright)
+  7. Generate XHS post content
+  8. Archive everything
 
 Usage:
     python webapp/run_pipeline.py AMD
@@ -132,6 +133,17 @@ def _archive_results(ticker: str, results: dict) -> Path:
             size_mb = video_dst.stat().st_size / (1024 * 1024)
             print(f"  → {video_dst.name} ({size_mb:.1f} MB)")
 
+    # 8. Slides (copy directory if exists)
+    if results.get("slides_dir"):
+        slides_src = Path(results["slides_dir"])
+        if slides_src.exists():
+            slides_dst = archive_dir / "slides"
+            if slides_dst.exists():
+                shutil.rmtree(slides_dst)
+            shutil.copytree(slides_src, slides_dst)
+            slide_count = len(list(slides_dst.glob("slide_*.png")))
+            print(f"  → slides/ ({slide_count} PNG images)")
+
     print(f"\n  Archive: {archive_dir}")
     return archive_dir
 
@@ -237,16 +249,43 @@ def run_pipeline(ticker: str, skip_video: bool = False, language: str = "both"):
 
         session.delete()
 
-    # ── Step 6: Generate XHS post ─────────────────────────────
-    print("\n[6/8] Generating XHS post content...")
-    xhs_post = _generate_xhs_post(ticker_upper, selected)
+    # ── Step 6: Generate XHS slides ──────────────────────────
+    slides_dir = None
+    print("\n[6/8] Generating XHS slides...")
+    try:
+        from platforms.xiaohongshu.generate_slides import generate_slides_from_curated
+        slides_dir = generate_slides_from_curated(
+            ticker=ticker_upper,
+            company_name=company,
+            curated_document=curated,
+            angle=selected,
+        )
+        slide_count = len(list(slides_dir.glob("slide_*.png")))
+        print(f"  Generated {slide_count} slide images in {slides_dir}")
+    except Exception as e:
+        print(f"  ERROR: Slide generation failed: {e}")
+
+    # ── Step 7: Generate XHS post ─────────────────────────────
+    print("\n[7/8] Generating XHS post content...")
+    try:
+        from platforms.xiaohongshu.generate_caption import generate_caption
+        caption_result = generate_caption(
+            ticker=ticker_upper,
+            company_name=company,
+            curated_document=curated,
+            angle=selected,
+        )
+        xhs_post = f"{caption_result['title']}\n\n{caption_result['body']}"
+    except Exception as e:
+        print(f"  Caption generation failed: {e}, using fallback")
+        xhs_post = _generate_xhs_post(ticker_upper, selected)
     print(f"  Post content:\n{'─'*40}")
     for line in xhs_post.split("\n"):
         print(f"  {line}")
     print(f"{'─'*40}")
 
-    # ── Step 7: Archive ───────────────────────────────────────
-    print("\n[7/8] Archiving results...")
+    # ── Step 8: Archive ───────────────────────────────────────
+    print("\n[8/8] Archiving results...")
     results = {
         "angles": angles,
         "selected_angle": selected,
@@ -254,6 +293,7 @@ def run_pipeline(ticker: str, skip_video: bool = False, language: str = "both"):
         "xhs_post": xhs_post,
         "video_path": video_path,
         "video_en_path": video_en_path,
+        "slides_dir": str(slides_dir) if slides_dir else None,
     }
     archive_dir = _archive_results(ticker, results)
 
