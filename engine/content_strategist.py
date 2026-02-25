@@ -464,7 +464,7 @@ def format_angle_for_prompt(angle: ContentAngle) -> str:
 
     aha = angle.extra.get("audience_aha_moment", "")
     if aha:
-        parts.append(f"**观众新认知**: {aha}")
+        parts.append(f"**观众顿悟时刻**: {aha}")
 
     if angle.score:
         parts.append("**评分**:")
