@@ -34,7 +34,7 @@
 | 维度 | 评估标准 |
 |------|----------|
 | 信息增量 (information_delta) | 能给读者/观众多少超越市场共识的新认知？ |
-| 争议张力 (controversy_tension) | 是否存在多空对立、认知偏差、反直觉的发现？ |
+| 争议张力 (controversy_tension) | 是否存在多空分歧、与市场共识不同的发现？ |
 | 数据密度 (data_density) | 报告中是否有足够的具体数据支撑深度讨论？ |
 | 叙事潜力 (narrative_potential) | 能否构建有起承转合的内容主线？ |
 | 时效相关 (timeliness) | 在当前市场环境下，这个角度的讨论价值有多高？ |
@@ -60,7 +60,7 @@
         "讨论锚点2：...",
         "讨论锚点3：..."
       ],
-      "audience_aha_moment": "观众/读者看完后最可能的顿悟时刻（50字以内）",
+      "audience_aha_moment": "观众/读者看完后最可能获得的新认知（50字以内）",
       "score": {{
         "information_delta": 8,
         "controversy_tension": 7,

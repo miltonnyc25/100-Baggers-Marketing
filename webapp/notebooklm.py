@@ -51,7 +51,7 @@ def _load_focus_prompt(ticker: str = "") -> str:
 
     This single prompt replaces the old per-theme steering prompts.
     The curated document (source material) already handles angle/theme
-    selection — the focus prompt only tells the AI hosts *how* to discuss.
+    selection — the focus prompt only tells the presenter *how* to deliver.
     """
     prompt_file = _PROMPTS_DIR / "video_focus.md"
     if not prompt_file.exists():
@@ -339,10 +339,10 @@ def _generate_zh_via_cli(
     title = f"{ticker} - {segment.title} (中文)"
 
     # Use the same focus prompt as English — the curated source doc
-    # already handles content selection; focus prompt just tells hosts
-    # *how* to discuss.  Prepend Chinese language instruction.
+    # already handles content selection; focus prompt just tells the
+    # presenter *how* to deliver.  Prepend Chinese language instruction.
     focus_prompt = (
-        "重要：请全程使用中文（简体中文）进行讨论。\n\n"
+        "重要：请全程使用中文（简体中文）进行讲解。\n\n"
         + _load_focus_prompt(ticker)
     )
 
@@ -398,7 +398,7 @@ def generate_curated_video(session) -> Path | None:
 
     title = f"{ticker} - {angle_name} (中文)"
     focus_prompt = (
-        "重要：请全程使用中文（简体中文）进行讨论。\n\n"
+        "重要：请全程使用中文（简体中文）进行讲解。\n\n"
         + _load_focus_prompt(ticker)
     )
 
@@ -464,7 +464,7 @@ def generate_curated_video_english(session) -> Path | None:
 
     title = f"{ticker} - {angle_name} (English)"
     focus_prompt = (
-        "Important: Please conduct the entire discussion in English.\n\n"
+        "Important: Please conduct the entire presentation in English.\n\n"
         + _load_focus_prompt(ticker)
     )
 

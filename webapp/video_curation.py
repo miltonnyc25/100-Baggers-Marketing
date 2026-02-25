@@ -25,15 +25,15 @@ VIDEO_ANGLE_INSTRUCTIONS = """\
 ## 视频平台特殊要求
 
 - 推荐2-3个角度（不是1个）
-- 每个角度必须能支撑5-10分钟的视频讨论
-- 讨论锚点(discussion_anchors)必须包含具体数据，AI主持人会直接引用
-- 包含audience_aha_moment字段：观众看完后最可能的顿悟时刻
+- 每个角度必须能支撑5-10分钟的单人讲解视频
+- 分析锚点(discussion_anchors)必须包含具体数据，讲解者会直接引用
+- 包含audience_aha_moment字段：观众看完后最可能获得的新认知
 """
 
 VIDEO_CURATION_CONTEXT = (
     "策展文档将被直接作为 NotebookLM 的源材料输入。"
-    "NotebookLM 会基于这份文档，由两位 AI 主持人展开一场 5-10 分钟的"
-    "中文深度投资讨论视频。AI 主持人无法讨论文档中没有的内容。"
+    "NotebookLM 会基于这份文档，由一位分析师以单人讲解形式制作 5-10 分钟的"
+    "中文深度投资分析视频。讲解者无法引用文档中没有的内容。"
 )
 
 

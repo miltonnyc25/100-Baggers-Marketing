@@ -128,7 +128,7 @@ Full Report (~200-800K chars)
 |------------|----------|-------------|
 | Xueqiu Writer | Intermediate — Writer condenses 30K → 6-8K post | 6,000-8,000 chars |
 | Xiaohongshu Slides | Intermediate — Gemini extracts data points for 5 slides | ~2,000 chars (slides + caption) |
-| NotebookLM Video | Direct source material — AI hosts discuss from 30K doc | 30K (the curated doc itself) |
+| NotebookLM Video | Direct source material — single-speaker explainer from 30K doc | 30K (the curated doc itself) |
 
 **Fallback behavior**: If curation fails (API error, empty result), each platform
 falls back to its existing method:
