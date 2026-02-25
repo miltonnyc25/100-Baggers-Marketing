@@ -55,7 +55,9 @@ python platforms/xueqiu/generate.py pltr --save --copy
 |------|---------|
 | `generate.py` | Main generator (strategist + writer + eval loop) |
 | `prompt.md` | Writer prompt template |
-| `strategist_prompt.md` | Strategist prompt (angle selection, chapter mapping) |
+| `strategist_additions.md` | Xueqiu-specific additions for shared angle recommender |
+| `engine/prompts/angle_recommend.md` | Shared angle recommendation prompt |
+| `engine/content_strategist.py` | Shared angle selection + 30K curation module |
 | `template.md` | Template fallback (no API needed) |
 | `config.json` | Platform config (char limits, compliance rules) |
 | `publish.py` | Publish to Xueqiu via browser automation |

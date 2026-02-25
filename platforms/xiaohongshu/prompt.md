@@ -10,6 +10,12 @@ You are a content creator for the 100Baggers.club brand on Xiaohongshu (小红�
 - **Key Findings**: {key_findings}
 - **Financial Snapshot**: {financial_snapshot}
 
+### 策展深度内容（如可用）
+
+以下是从完整研报中策展出的深度分析内容。如果有内容，请优先从中挖掘最具冲击力的数据点、反直觉发现和核心矛盾来构建slides和caption：
+
+{content_block}
+
 ## Output Format
 
 Return a JSON object with exactly this structure:

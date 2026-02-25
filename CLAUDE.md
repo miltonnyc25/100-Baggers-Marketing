@@ -11,6 +11,10 @@ for 100Baggers.club deep research reports.
 ├── engine/                        # Content extraction engine
 │   ├── config.py                  # Paths, API URLs, ticker list
 │   ├── report_schema.py           # ReportData dataclass
+│   ├── content_strategist.py      # Shared angle selection + 30K curation
+│   ├── prompts/                   # Unified prompt templates
+│   │   ├── angle_recommend.md     # Angle recommendation prompt
+│   │   └── content_curation.md    # 30K document curation prompt
 │   ├── segment_schema.py          # SegmentData dataclass
 │   ├── segment_splitter.py        # chapters → 3-5 themed segments
 │   ├── segment_generator.py       # segment → mini-ReportData → platform generator
@@ -101,6 +105,36 @@ InvestView_v0/public/reports/{ticker}/*.md
     ▼    ▼    ▼        ▼
  clawd-workspace skills (building blocks)
 ```
+
+### Shared Content Strategist (engine/content_strategist.py)
+
+Unified angle selection + 30K document curation pipeline shared across platforms.
+
+```
+Full Report (~200-800K chars)
+        │
+   preprocess_markdown()          ← strip noise, cap at 800K
+        │
+   recommend_angles()             ← Gemini selects best angles
+        │                            (with platform-specific additions)
+   curate_content(30K)            ← Gemini curates focused document
+        │
+   ┌────┼──────────┐
+   ▼    ▼          ▼
+ 雪球   小红书     NotebookLM
+```
+
+| Downstream | 30K Role | Final Output |
+|------------|----------|-------------|
+| Xueqiu Writer | Intermediate — Writer condenses 30K → 6-8K post | 6,000-8,000 chars |
+| Xiaohongshu Slides | Intermediate — Gemini extracts data points for 5 slides | ~2,000 chars (slides + caption) |
+| NotebookLM Video | Direct source material — AI hosts discuss from 30K doc | 30K (the curated doc itself) |
+
+**Fallback behavior**: If curation fails (API error, empty result), each platform
+falls back to its existing method:
+- Xueqiu → raw chapter extraction via `extract_chapters()`
+- Xiaohongshu → `executive_summary[:2000]` + `key_findings` + `financial_snapshot`
+- Video → error raised to webapp
 
 ### Segmented Flow (Web UI)
 

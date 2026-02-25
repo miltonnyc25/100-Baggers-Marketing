@@ -1,76 +1,69 @@
 """
 Video curation pipeline: angle recommendation + document curation.
 
+Thin wrapper around engine.content_strategist, preserving the existing
+function signatures that webapp/app.py expects.
+
 Step 1: Gemini reads full report → recommends 2-3 video angles with 5-dimension scoring.
 Step 2: User picks an angle → Gemini curates a 30,000+ char document from the report.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-import re
-from pathlib import Path
 
-import google.generativeai as genai
-
-from engine.config import GEMINI_MODEL
-from engine.content_filter import clean_generated_content
+from engine.report_schema import ReportData, ReportMetadata
+from engine.content_strategist import (
+    recommend_angles as _recommend,
+    curate_content as _curate,
+    ContentAngle,
+)
 
 log = logging.getLogger(__name__)
 
-_PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+VIDEO_ANGLE_INSTRUCTIONS = """\
+## 视频平台特殊要求
 
-# Configure Gemini
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
+- 推荐2-3个角度（不是1个）
+- 每个角度必须能支撑5-10分钟的视频讨论
+- 讨论锚点(discussion_anchors)必须包含具体数据，AI主持人会直接引用
+- 包含audience_aha_moment字段：观众看完后最可能的顿悟时刻
+"""
+
+VIDEO_CURATION_CONTEXT = (
+    "策展文档将被直接作为 NotebookLM 的源材料输入。"
+    "NotebookLM 会基于这份文档，由两位 AI 主持人展开一场 5-10 分钟的"
+    "中文深度投资讨论视频。AI 主持人无法讨论文档中没有的内容。"
+)
+
+
+def _build_report_from_text(ticker: str, company_name: str, report_content: str) -> ReportData:
+    """Build a minimal ReportData from raw text (webapp passes strings, not ReportData)."""
+    return ReportData(
+        metadata=ReportMetadata(
+            ticker=ticker,
+            company_name=company_name,
+        ),
+        raw_markdown=report_content,
+    )
 
 
 def recommend_angles(ticker: str, company_name: str, report_content: str) -> list[dict]:
     """Call Gemini to recommend 2-3 video angles from the full report.
 
+    Backward-compatible wrapper: webapp/app.py calls this with raw strings.
     Returns a list of angle dicts with scores.
     """
-    prompt_template = (_PROMPTS_DIR / "video_angle_recommend.md").read_text(encoding="utf-8")
-    word_count = len(report_content)
-    prompt = prompt_template.replace("{ticker}", ticker.upper())
-    prompt = prompt.replace("{company_name}", company_name)
-    prompt = prompt.replace("{word_count}", str(word_count))
-    prompt = prompt.replace("{report_content}", report_content)
-
-    model = genai.GenerativeModel(GEMINI_MODEL)
-
-    # Try with JSON response mime type first
-    try:
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                max_output_tokens=4096,
-                response_mime_type="application/json",
-            ),
-        )
-        angles = json.loads(response.text)
-        if isinstance(angles, list) and len(angles) > 0:
-            log.info("Got %d angle recommendations (JSON mode)", len(angles))
-            return angles
-    except Exception:
-        log.warning("JSON mode failed, retrying without response_mime_type")
-
-    # Fallback: no response_mime_type, parse JSON from text
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            max_output_tokens=4096,
-        ),
+    report = _build_report_from_text(ticker, company_name, report_content)
+    result = _recommend(
+        report,
+        platform_instructions=VIDEO_ANGLE_INSTRUCTIONS,
+        max_angles=3,
     )
-    text = response.text
-    # Extract JSON array from markdown code fences if present
-    json_match = re.search(r"```(?:json)?\s*\n(\[.*?\])\s*\n```", text, re.DOTALL)
-    if json_match:
-        text = json_match.group(1)
-    angles = json.loads(text)
-    log.info("Got %d angle recommendations (text mode)", len(angles))
-    return angles
+    if not result or not result.angles:
+        return []
+
+    return [a.to_dict() for a in result.angles]
 
 
 def curate_document(
@@ -78,64 +71,15 @@ def curate_document(
 ) -> str:
     """Call Gemini to curate a 30k+ char document for the selected angle.
 
+    Backward-compatible wrapper: webapp/app.py calls this with raw strings.
     Returns the curated markdown document.
     """
-    prompt_template = (_PROMPTS_DIR / "video_curation.md").read_text(encoding="utf-8")
-    word_count = len(report_content)
-    angle_text = _format_angle_for_prompt(selected_angle)
-
-    prompt = prompt_template.replace("{ticker}", ticker.upper())
-    prompt = prompt.replace("{company_name}", company_name)
-    prompt = prompt.replace("{word_count}", str(word_count))
-    prompt = prompt.replace("{selected_angle}", angle_text)
-    prompt = prompt.replace("{report_content}", report_content)
-
-    model = genai.GenerativeModel(GEMINI_MODEL)
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            max_output_tokens=65536,
-            temperature=1.0,
-        ),
+    report = _build_report_from_text(ticker, company_name, report_content)
+    angle = ContentAngle.from_dict(selected_angle)
+    curated = _curate(
+        report, angle,
+        platform_instructions=VIDEO_CURATION_CONTEXT,
     )
-
-    curated = response.text
-    curated = clean_generated_content(curated)
-    log.info("Curated document: %d chars", len(curated))
+    if not curated:
+        raise RuntimeError("Content curation returned empty result")
     return curated
-
-
-def _format_angle_for_prompt(angle: dict) -> str:
-    """Format an angle dict as readable text for the curation prompt's {selected_angle}."""
-    parts = [
-        f"**角度名称**: {angle.get('angle_name', '')}",
-        f"**核心论点**: {angle.get('core_thesis', '')}",
-        f"**选择理由**: {angle.get('why_this_angle', '')}",
-    ]
-
-    anchors = angle.get("discussion_anchors", [])
-    if anchors:
-        parts.append("**讨论锚点**:")
-        for i, a in enumerate(anchors, 1):
-            parts.append(f"  {i}. {a}")
-
-    aha = angle.get("audience_aha_moment", "")
-    if aha:
-        parts.append(f"**观众顿悟时刻**: {aha}")
-
-    scores = angle.get("score", {})
-    if scores:
-        parts.append("**评分**:")
-        labels = {
-            "information_delta": "信息增量",
-            "controversy_tension": "争议张力",
-            "data_density": "数据密度",
-            "narrative_potential": "叙事潜力",
-            "timeliness": "时效相关",
-        }
-        for key, label in labels.items():
-            val = scores.get(key, "")
-            if val:
-                parts.append(f"  - {label}: {val}/10")
-
-    return "\n".join(parts)

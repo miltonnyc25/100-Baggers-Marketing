@@ -104,8 +104,14 @@ def _apply_compliance(content: dict) -> dict:
 # Prompt rendering
 # =====================================================================
 
-def _render_prompt(report: ReportData) -> str:
-    """Render the prompt.md template with report data."""
+def _render_prompt(report: ReportData, curated_content: str = "") -> str:
+    """Render the prompt.md template with report data.
+
+    Args:
+        report: Parsed report data.
+        curated_content: Optional 30K curated content from shared strategist.
+            When available, replaces minimal top-level field extraction.
+    """
     prompt_template = _PROMPT_PATH.read_text(encoding="utf-8")
 
     key_findings_str = "\n".join(
@@ -116,12 +122,20 @@ def _render_prompt(report: ReportData) -> str:
         report.financial_snapshot, ensure_ascii=False, indent=2
     ) if report.financial_snapshot else "(not available)"
 
+    # Build content block: curated (rich) or minimal (existing fallback)
+    if curated_content:
+        # Truncate to 25K to stay within token budget alongside other fields
+        content_block = curated_content[:25000]
+    else:
+        content_block = "(无策展内容 — 请基于上方的摘要和发现生成内容)"
+
     prompt = prompt_template.replace("{ticker}", report.metadata.ticker.upper())
     prompt = prompt.replace("{ticker_lower}", report.metadata.ticker.lower())
     prompt = prompt.replace("{company_name}", report.metadata.company_name)
     prompt = prompt.replace("{executive_summary}", report.executive_summary[:2000] or "(not available)")
     prompt = prompt.replace("{key_findings}", key_findings_str)
     prompt = prompt.replace("{financial_snapshot}", snapshot_str)
+    prompt = prompt.replace("{content_block}", content_block)
 
     return prompt
 
@@ -387,10 +401,26 @@ def generate(report: ReportData, max_attempts: int = 3) -> dict:
     ticker = report.metadata.ticker.upper()
     rewrite_instructions = ""
 
+    # Try to get curated content from shared strategist
+    curated_content = ""
+    try:
+        from engine.content_strategist import recommend_angles, curate_content
+        result = recommend_angles(report, max_angles=1)
+        if result and result.angles:
+            curated_content = curate_content(
+                report, result.angles[0],
+                target_chars=30000,
+                platform_instructions="内容将用于小红书slide deck（5张卡片）和短视频脚本。需要最具冲击力的数据点和反直觉发现。",
+            ) or ""
+            if curated_content:
+                print(f"[xiaohongshu/generate] Curated {len(curated_content)} chars for rich content")
+    except Exception as e:
+        print(f"[xiaohongshu/generate] Curation skipped: {e}")
+
     api_available = True
     for attempt in range(1, max_attempts + 1):
         try:
-            prompt = _render_prompt(report)
+            prompt = _render_prompt(report, curated_content=curated_content)
             if rewrite_instructions:
                 prompt = (
                     f"REWRITE REQUIRED — your previous output was rejected.\n"

@@ -41,12 +41,23 @@ if str(_PROJECT_ROOT) not in sys.path:
 from engine.report_schema import ReportData
 from engine.config import GEMINI_MODEL, PRODUCTION_URL, get_company_name
 from engine.html_utils import save_html, copy_to_clipboard
+from engine.content_strategist import (
+    preprocess_markdown,
+    parse_strategy_json,
+    extract_chapters,
+    format_angle_for_prompt,
+    recommend_angles as _shared_recommend_angles,
+    curate_content as _shared_curate_content,
+    ContentAngle,
+    StrategyResult,
+    get_reliable_company_name,
+)
 
 # ── Paths ──────────────────────────────────────────────────────────────
 _PLATFORM_DIR = Path(__file__).resolve().parent
 _CONFIG_PATH = _PLATFORM_DIR / "config.json"
 _PROMPT_PATH = _PLATFORM_DIR / "prompt.md"
-_STRATEGIST_PROMPT_PATH = _PLATFORM_DIR / "strategist_prompt.md"
+_STRATEGIST_ADDITIONS_PATH = _PLATFORM_DIR / "strategist_additions.md"
 _TEMPLATE_PATH = _PLATFORM_DIR / "template.md"
 _ARCHIVE_DIR = _PLATFORM_DIR / "archive"
 
@@ -82,9 +93,9 @@ def _load_prompt_template() -> str:
         return f.read()
 
 
-def _load_strategist_prompt() -> str:
-    """Load the strategist prompt from strategist_prompt.md."""
-    with open(_STRATEGIST_PROMPT_PATH, "r", encoding="utf-8") as f:
+def _load_xueqiu_platform_section() -> str:
+    """Load Xueqiu-specific additions for the shared angle recommender prompt."""
+    with open(_STRATEGIST_ADDITIONS_PATH, "r", encoding="utf-8") as f:
         return f.read()
 
 
@@ -257,20 +268,6 @@ def _clean_chapter_for_template(content: str) -> str:
     return content
 
 
-def _get_reliable_company_name(report: ReportData) -> str:
-    """Get reliable company name: prefer config mapping, fall back to parsed."""
-    ticker = report.metadata.ticker.upper()
-    # Config mapping is authoritative
-    mapped = get_company_name(ticker)
-    if mapped != ticker:
-        return mapped
-    # Fall back to parsed name only if it looks like a real name
-    parsed = report.metadata.company_name
-    if parsed and len(parsed) > 1 and not any(c.isdigit() for c in parsed[:3]):
-        return parsed
-    return ticker
-
-
 def _get_metadata_field(report: ReportData, field: str) -> str:
     """Get metadata field, falling back to key_findings if empty."""
     val = getattr(report.metadata, field, "")
@@ -415,7 +412,7 @@ def _generate_from_template(report: ReportData, config: dict) -> str:
     sections: list[str] = []
 
     # ── Line 1: Report link ────────────────────────────────────────────
-    company = _get_reliable_company_name(report)
+    company = get_reliable_company_name(report)
     cta_template = config.get("cta_template", "")
     if cta_template:
         cta = cta_template.format(ticker_lower=ticker.lower())
@@ -474,184 +471,62 @@ def _generate_from_template(report: ReportData, config: dict) -> str:
 # TWO-STAGE PIPELINE
 # ══════════════════════════════════════════════════════════════════════
 
-# ── Preprocessing ─────────────────────────────────────────────────────
-
-def _preprocess_markdown(raw: str) -> str:
-    """Strip noise from raw markdown to fit in Gemini's context window.
-
-    Removes: [DM-xxx] tags, mermaid/code blocks, appendix sections,
-    table separator lines, compresses whitespace. Hard cap at 800K chars.
-    """
-    text = raw
-
-    # Strip [DM-xxx] reference tags (various formats: DM-FIN-001, DM-P4-01, DM-P3A-01)
-    text = re.sub(r"\[DM-[^\]]+\]", "", text)
-
-    # Strip reference tags like [硬数据: ...] [合理推断: ...]
-    text = re.sub(r"\[(?:硬数据|合理推断|主观判断)[^\]]*\]", "", text)
-
-    # Strip mermaid code blocks
-    text = re.sub(r"```mermaid\s*\n.*?```", "", text, flags=re.DOTALL)
-
-    # Strip other code blocks (keep content of plain text blocks)
-    text = re.sub(r"```(?:graph|flowchart|dot|plantuml)\s*\n.*?```", "", text, flags=re.DOTALL)
-
-    # Strip ASCII art (lines of dashes/pipes)
-    text = re.sub(r"(?m)^[│├└┌┐┘┤┬┴┼─]{3,}.*$", "", text)
-
-    # Compress table separator lines (|---|---|) to a single marker
-    text = re.sub(r"^\|[\s:|-]+\|$", "|---|", text, flags=re.MULTILINE)
-
-    # Compress runs of 3+ blank lines to 2
-    text = re.sub(r"\n{3,}", "\n\n", text)
-
-    # Hard cap with smart truncation from end
-    if len(text) > 800_000:
-        # Try to cut at a chapter boundary
-        cut_point = text.rfind("\n## ", 0, 800_000)
-        if cut_point > 600_000:
-            text = text[:cut_point] + "\n\n[…报告后续章节已截断]"
-        else:
-            text = text[:800_000] + "\n\n[…已截断]"
-
-    return text
-
-
-# ── Strategist stage ──────────────────────────────────────────────────
+# ── Strategist stage (delegates to shared engine) ────────────────────
 
 def _call_strategist(
     report: ReportData, chart_catalog_text: str
 ) -> Optional[dict]:
-    """Call Gemini with the full report to get a post strategy.
+    """Call the shared angle recommender with Xueqiu-specific additions.
 
     Returns the parsed strategy JSON dict, or None on failure.
     """
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        return None
-
-    try:
-        import google.generativeai as genai
-    except ImportError:
-        return None
-
-    # Preprocess the full markdown
-    full_text = _preprocess_markdown(report.raw_markdown)
-    if len(full_text) < 500:
-        print("[xueqiu/generate] Preprocessed markdown too short for strategist")
-        return None
-
-    strategist_template = _load_strategist_prompt()
-    prompt = strategist_template.format(
-        ticker=report.metadata.ticker.upper(),
-        company_name=_get_reliable_company_name(report),
-        full_report=full_text,
-        chart_catalog=chart_catalog_text or "(No HTML report / no charts found)",
+    platform_section = _load_xueqiu_platform_section()
+    result = _shared_recommend_angles(
+        report,
+        platform_instructions=platform_section,
+        chart_catalog=chart_catalog_text,
     )
-
-    print(f"[xueqiu/generate] Calling strategist ({len(prompt)} chars prompt, "
-          f"~{len(prompt) // 4} tokens est.)")
-
-    try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        response = model.generate_content(prompt)
-        raw = response.text.strip()
-    except Exception as e:
-        print(f"[xueqiu/generate] Strategist call failed: {e}")
+    if not result or not result.angles:
         return None
 
-    # Parse JSON — strip markdown fences if present
-    return _parse_strategy_json(raw)
+    # Convert StrategyResult back to existing dict format for backward compat
+    return _strategy_result_to_xueqiu_dict(result)
 
 
-def _parse_strategy_json(raw: str) -> Optional[dict]:
-    """Robustly parse JSON from strategist response."""
-    text = raw.strip()
-
-    # Strip markdown code fences
-    if "```json" in text:
-        text = text.split("```json", 1)[1].split("```", 1)[0]
-    elif "```" in text:
-        text = text.split("```", 1)[1].split("```", 1)[0]
-    text = text.strip()
-
-    try:
-        result = json.loads(text)
-        if "posts" in result and isinstance(result["posts"], list):
-            return result
-    except json.JSONDecodeError:
-        pass
-
-    # Fallback: extract the first JSON object
-    match = re.search(r"\{[\s\S]+\}", text)
-    if match:
-        try:
-            result = json.loads(match.group())
-            if "posts" in result and isinstance(result["posts"], list):
-                return result
-        except json.JSONDecodeError:
-            pass
-
-    print("[xueqiu/generate] Failed to parse strategist JSON response")
-    return None
-
-
-# ── Chapter extraction for writer ─────────────────────────────────────
-
-def _extract_chapters_for_post(
-    report: ReportData, chapter_refs: list[int]
-) -> str:
-    """Extract full content_markdown for the chapters referenced by the strategist.
-
-    chapter_refs are 1-based chapter numbers. Tries multiple title patterns:
-    - HTML format: "第N章：..." (e.g. "第2章：财务全景")
-    - Markdown format: "ChN:" (e.g. "Ch2: 财务全景")
-    - Fallback: by list index
-    """
-    parts = []
-    for ref in chapter_refs:
-        found = False
-        # Try matching "第{ref}章" or "Ch{ref}:" in chapter titles
-        targets = [f"第{ref}章", f"Ch{ref}:", f"Ch{ref}："]
-        for ch in report.chapters:
-            if any(t in ch.title for t in targets):
-                content = ch.content_markdown
-                content = re.sub(r"\[(?:硬数据|合理推断|主观判断)[^\]]*\]", "", content)
-                content = re.sub(r"```mermaid\s*\n.*?```", "", content, flags=re.DOTALL)
-                parts.append(f"=== {ch.title} ===\n\n{content}")
-                found = True
-                break
-
-        if not found:
-            # Also try "N. " prefix (some markdown reports use "1. 异常狩猎")
-            prefix = f"{ref}. "
-            for ch in report.chapters:
-                if ch.title.startswith(prefix):
-                    content = ch.content_markdown
-                    content = re.sub(r"\[(?:硬数据|合理推断|主观判断)[^\]]*\]", "", content)
-                    content = re.sub(r"```mermaid\s*\n.*?```", "", content, flags=re.DOTALL)
-                    parts.append(f"=== {ch.title} ===\n\n{content}")
-                    found = True
-                    break
-
-        if not found:
-            # Last resort: by index (0-based)
-            idx = ref - 1
-            if 0 <= idx < len(report.chapters):
-                ch = report.chapters[idx]
-                content = ch.content_markdown
-                content = re.sub(r"\[(?:硬数据|合理推断|主观判断)[^\]]*\]", "", content)
-                content = re.sub(r"```mermaid\s*\n.*?```", "", content, flags=re.DOTALL)
-                parts.append(f"=== {ch.title} ===\n\n{content}")
-
-    return "\n\n".join(parts)
+def _strategy_result_to_xueqiu_dict(result: StrategyResult) -> dict:
+    """Convert a StrategyResult to the dict format expected by the writer stage."""
+    posts = []
+    for angle in result.angles:
+        post = {
+            "post_id": angle.angle_name or angle.extra.get("post_id", f"post{len(posts) + 1}"),
+            "thesis": angle.thesis,
+            "chapter_refs": angle.chapter_refs,
+            "key_data_points": angle.key_data_points,
+            "hook_type": angle.extra.get("hook_type", ""),
+            "title_hook": angle.extra.get("title_hook", ""),
+            "recommended_charts": angle.extra.get("recommended_charts", []),
+        }
+        posts.append(post)
+    return {
+        "ticker": result.raw_json.get("ticker", ""),
+        "num_posts": len(posts),
+        "rationale": result.rationale,
+        "posts": posts,
+    }
 
 
 # ── Writer stage ──────────────────────────────────────────────────────
 
 def _build_strategist_directives(post_plan: dict) -> str:
     """Build the strategist directives block for the writer prompt."""
+    # Try using shared ContentAngle formatting
+    try:
+        angle = ContentAngle.from_dict(post_plan)
+        return format_angle_for_prompt(angle)
+    except Exception:
+        pass
+
+    # Fallback to simple formatting
     thesis = post_plan.get("thesis", "")
     hook = post_plan.get("title_hook", "")
     data_points = post_plan.get("key_data_points", [])
@@ -701,7 +576,7 @@ def _call_writer_for_post(
     prompt = prompt_template.format(
         ticker=report.metadata.ticker,
         ticker_lower=report.metadata.ticker.lower(),
-        company_name=_get_reliable_company_name(report),
+        company_name=get_reliable_company_name(report),
         market_cap=_get_metadata_field(report, "market_cap"),
         stock_price=_get_metadata_field(report, "stock_price"),
         core_contradiction=_extract_core_contradiction(report),
@@ -844,7 +719,23 @@ def generate_multi(report: ReportData, max_attempts: int = 3) -> Optional[Xueqiu
     for post_plan in posts_plan:
         post_id = post_plan.get("post_id", f"post{len(result.posts) + 1}")
         chapter_refs = post_plan.get("chapter_refs", [])
-        chapter_content = _extract_chapters_for_post(report, chapter_refs)
+
+        # Try curation for 30K chars; fallback to raw chapter extraction
+        chapter_content = ""
+        try:
+            angle = ContentAngle.from_dict(post_plan)
+            curated = _shared_curate_content(
+                report, angle, target_chars=30000,
+                platform_instructions="写手会把这些内容改写为6000-8000字的雪球深度分析帖。保留完整数据链条和推导过程。",
+            )
+            if curated and len(curated) > 5000:
+                chapter_content = curated
+                print(f"[xueqiu/generate] {post_id}: curated {len(curated)} chars")
+        except Exception as e:
+            print(f"[xueqiu/generate] {post_id}: curation failed ({e}), using raw chapters")
+
+        if not chapter_content:
+            chapter_content = extract_chapters(report, chapter_refs)
 
         if not chapter_content:
             print(f"[xueqiu/generate] No chapter content for {post_id}, "
@@ -909,7 +800,7 @@ def _generate_with_ai_and_feedback(
     prompt = prompt_template.format(
         ticker=report.metadata.ticker,
         ticker_lower=report.metadata.ticker.lower(),
-        company_name=_get_reliable_company_name(report),
+        company_name=get_reliable_company_name(report),
         market_cap=_get_metadata_field(report, "market_cap"),
         stock_price=_get_metadata_field(report, "stock_price"),
         core_contradiction=_extract_core_contradiction(report),
