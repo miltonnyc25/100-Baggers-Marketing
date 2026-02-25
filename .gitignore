@@ -6,3 +6,6 @@ webapp/static/screenshots/
 
 # Platform archive outputs (generated content, may include large files)
 platforms/*/archive/
+
+# Analytics data (contains account-level note IDs and engagement metrics)
+marketing/analytics/**/*.json
