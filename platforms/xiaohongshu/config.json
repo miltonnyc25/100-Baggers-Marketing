@@ -7,6 +7,17 @@
   "slides_count": 5,
   "cover_ratio": "3:4",
   "cover_size": [1080, 1440],
+  "slide_image": {
+    "width": 1080,
+    "height": 1440,
+    "quality": 90,
+    "format": "jpeg"
+  },
+  "video_zh": {
+    "language": "zh_Hans",
+    "trim_end_seconds": 2.5,
+    "source_fraction": 0.33
+  },
   "tone": "educational_casual",
   "compliance": {
     "sensitive_topics": ["台海", "中美脱钩", "制裁", "军事", "西藏", "新疆"],

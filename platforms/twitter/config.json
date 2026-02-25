@@ -3,6 +3,10 @@
   "language": "en",
   "post_min_words": 300,
   "post_max_words": 500,
+  "long_min_words": 1500,
+  "long_max_words": 2500,
+  "short_min_words": 200,
+  "short_max_words": 300,
   "tone": "data_forward_conversational",
   "compliance": {
     "forbidden_words": ["overvalued", "undervalued", "buy", "sell", "hold", "bullish", "bearish", "price target"],

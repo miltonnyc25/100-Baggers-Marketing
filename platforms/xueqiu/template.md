@@ -17,7 +17,7 @@
 $ticker #tag1 #tag2 #tag3
 
 ## Guidelines
-- Total length: 2000-5000 chars
+- Total length: 5000-10000 chars
 - Include 2-3 data tables or charts if possible
 - Use conversational tone, avoid jargon
 - Lead with the most surprising finding

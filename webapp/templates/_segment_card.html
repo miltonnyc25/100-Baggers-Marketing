@@ -38,6 +38,28 @@
         </form>
     </details>
 
+    <!-- Slide Images (XHS only) -->
+    {% if session.platform == 'xiaohongshu' %}
+    <details {% if segment.slide_images %}open{% endif %}>
+        <summary>Slides ({{ segment.slide_images | length }})</summary>
+        <div class="slide-gallery">
+            {% for url in segment.slide_images %}
+            <div class="slide-thumb">
+                <img src="{{ url }}" alt="Slide {{ loop.index }}" loading="lazy">
+            </div>
+            {% endfor %}
+        </div>
+        <div class="editor-actions">
+            <button type="button" class="outline"
+                    hx-post="{{ url_for('regenerate_slides', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                    hx-target="#card-{{ segment.segment_id }}"
+                    hx-swap="innerHTML">
+                Re-render Slides
+            </button>
+        </div>
+    </details>
+    {% endif %}
+
     <!-- Screenshots -->
     {% if segment.screenshots %}
     <details open>
@@ -61,7 +83,7 @@
         <pre class="source-preview"><code>{{ segment.content_markdown[:3000] }}{% if segment.content_markdown | length > 3000 %}...{% endif %}</code></pre>
     </details>
 
-    <!-- Video Section -->
+    <!-- Video Section (English) -->
     <details>
         <summary>
             Video
@@ -94,4 +116,40 @@
             {% endif %}
         </div>
     </details>
+
+    <!-- Chinese Video Section (XHS only) -->
+    {% if session.platform == 'xiaohongshu' %}
+    <details>
+        <summary>
+            Chinese Video
+            {% if segment.video_zh_status == 'ready' %} &#10003;
+            {% elif segment.video_zh_status == 'generating' %} (generating...)
+            {% elif segment.video_zh_status == 'failed' %} &#10007;
+            {% endif %}
+        </summary>
+        <div class="video-zh-section" id="video-zh-{{ segment.segment_id }}">
+            {% if segment.video_zh_status == 'ready' and segment.video_zh_path %}
+                <video controls width="100%">
+                    <source src="{{ segment.video_zh_path }}" type="video/mp4">
+                </video>
+            {% elif segment.video_zh_status == 'generating' %}
+                <p aria-busy="true">Generating Chinese video...</p>
+                <div hx-get="{{ url_for('video_zh_status', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                     hx-trigger="every 5s"
+                     hx-swap="none"
+                     class="video-zh-poll">
+                </div>
+            {% elif segment.video_zh_status == 'failed' %}
+                <p>Chinese video generation failed.</p>
+            {% endif %}
+            {% if segment.video_zh_status != 'generating' %}
+            <button class="outline"
+                    hx-post="{{ url_for('generate_video_zh', session_id=session.session_id, segment_id=segment.segment_id) }}"
+                    hx-swap="none">
+                {% if segment.video_zh_status == 'failed' %}Retry{% else %}Generate{% endif %} Chinese Video
+            </button>
+            {% endif %}
+        </div>
+    </details>
+    {% endif %}
 </article>

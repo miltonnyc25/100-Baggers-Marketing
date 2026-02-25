@@ -12,16 +12,34 @@ document.body.addEventListener("htmx:afterSwap", function (evt) {
   }
 });
 
-// Poll video status and refresh card when video is ready
+// Poll video status (English + Chinese) and refresh card when ready
 document.body.addEventListener("htmx:afterRequest", function (evt) {
   if (!evt.detail.xhr) return;
   var url = evt.detail.xhr.responseURL || "";
-  if (url.indexOf("/video/status") === -1) return;
+
+  // Segment video polling
+  var isVideoStatus = url.indexOf("/video/status") !== -1 || url.indexOf("/video-zh/status") !== -1;
+  // Video curation pipeline polling
+  var isAnglesStatus = url.indexOf("/angles/status") !== -1;
+  var isCurationStatus = url.indexOf("/curation/status") !== -1;
+  var isCuratedVideoStatus = url.indexOf("/curated-video/status") !== -1;
+  var isPublishStatus = url.indexOf("/curated-video/publish-status") !== -1;
+
+  if (!isVideoStatus && !isAnglesStatus && !isCurationStatus && !isCuratedVideoStatus && !isPublishStatus) return;
 
   try {
     var data = JSON.parse(evt.detail.xhr.responseText);
-    if (data.status === "ready" || data.status === "failed") {
-      // Reload the page to show the updated video state
+
+    if (isCuratedVideoStatus) {
+      // Curated video: check both Chinese and English statuses
+      var zhDone = !data.status || data.status === "ready" || data.status === "failed" || data.status === "pending";
+      var enDone = !data.en_status || data.en_status === "ready" || data.en_status === "failed" || data.en_status === "pending";
+      var anyChanged = data.status === "ready" || data.status === "failed" || data.en_status === "ready" || data.en_status === "failed";
+      if (anyChanged && zhDone && enDone) {
+        window.location.reload();
+      }
+    } else if (data.status === "ready" || data.status === "failed" || data.status === "published") {
+      // Reload the page to show the updated state
       window.location.reload();
     }
   } catch (e) {

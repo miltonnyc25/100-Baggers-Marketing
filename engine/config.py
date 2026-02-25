@@ -36,6 +36,41 @@ AVAILABLE_TICKERS = [
     "pg", "pltr", "rblx", "rddt", "smci", "sofi", "tsla", "tsm", "vrt",
 ]
 
+# ── Ticker → Company name mapping ───────────────────────────────────
+# Markdown parser often fails to extract company_name from reports.
+TICKER_COMPANY_NAMES = {
+    "AAPL": "Apple",
+    "AMAT": "Applied Materials",
+    "AMD": "AMD",
+    "AMZN": "Amazon",
+    "ANET": "Arista Networks",
+    "APP": "AppLovin",
+    "ASML": "ASML",
+    "COST": "Costco",
+    "ETN": "Eaton",
+    "GOOGL": "Alphabet",
+    "KLAC": "KLA Corporation",
+    "LRCX": "Lam Research",
+    "META": "Meta Platforms",
+    "MSFT": "Microsoft",
+    "MU": "Micron Technology",
+    "ORCL": "Oracle",
+    "PG": "Procter & Gamble",
+    "PLTR": "Palantir Technologies",
+    "RBLX": "Roblox",
+    "RDDT": "Reddit",
+    "SMCI": "Super Micro Computer",
+    "SOFI": "SoFi Technologies",
+    "TSLA": "Tesla",
+    "TSM": "TSMC",
+    "VRT": "Vertiv",
+}
+
+
+def get_company_name(ticker: str) -> str:
+    """Get company name for a ticker, from mapping."""
+    return TICKER_COMPANY_NAMES.get(ticker.upper(), ticker.upper())
+
 
 def report_dir(ticker: str) -> Path:
     """Return the report directory for a given ticker."""

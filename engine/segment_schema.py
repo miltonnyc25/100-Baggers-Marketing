@@ -26,9 +26,16 @@ class SegmentData:
     # Report screenshots (relative URLs to chart/table images)
     screenshots: list[str] = field(default_factory=list)
 
-    # NotebookLM video
+    # NotebookLM video (English)
     video_path: str = ""
     video_status: str = "pending"  # pending | generating | processing | ready | failed
+
+    # Slide images (XHS)
+    slide_images: list[str] = field(default_factory=list)  # JPG URL paths
+
+    # Chinese NotebookLM video (XHS)
+    video_zh_path: str = ""
+    video_zh_status: str = "pending"  # pending | generating | ready | failed
 
     # Review workflow
     status: str = "draft"  # draft | approved | published | rejected
@@ -47,6 +54,9 @@ class SegmentData:
             "screenshots": self.screenshots,
             "video_path": self.video_path,
             "video_status": self.video_status,
+            "slide_images": self.slide_images,
+            "video_zh_path": self.video_zh_path,
+            "video_zh_status": self.video_zh_status,
             "status": self.status,
         }
 
@@ -65,5 +75,8 @@ class SegmentData:
             screenshots=d.get("screenshots", []),
             video_path=d.get("video_path", ""),
             video_status=d.get("video_status", "pending"),
+            slide_images=d.get("slide_images", []),
+            video_zh_path=d.get("video_zh_path", ""),
+            video_zh_status=d.get("video_zh_status", "pending"),
             status=d.get("status", "draft"),
         )

@@ -61,8 +61,20 @@ def strip_price_targets(text: str) -> str:
     return text.strip()
 
 
+def strip_markdown_formatting(text: str) -> str:
+    """Remove markdown formatting markers (bold, italic, headers) from plain text output."""
+    # Remove **bold** markers
+    text = re.sub(r"\*{2}([^*]+?)\*{2}", r"\1", text)
+    # Remove *italic* markers
+    text = re.sub(r"(?<!\*)\*([^*]+?)\*(?!\*)", r"\1", text)
+    # Remove markdown headers (# ## ###) but keep text
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+    return text
+
+
 def clean_generated_content(text: str) -> str:
     """Apply all content filters to generated text."""
     text = strip_mermaid_and_code(text)
     text = strip_price_targets(text)
+    text = strip_markdown_formatting(text)
     return text

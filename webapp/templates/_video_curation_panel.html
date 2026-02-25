@@ -1,0 +1,302 @@
+{# Video Curation Pipeline Panel — included in session.html #}
+
+<article style="margin-bottom: 2rem;">
+    <header>
+        <div class="segment-header">
+            <div>
+                <strong>Video Curation Pipeline</strong>
+                <small>Angle recommendation → Content curation → Video generation → XHS publish</small>
+            </div>
+            <div class="segment-actions">
+                {% if session.curated_publish_status == 'published' %}
+                    <span class="status-badge status-published">published</span>
+                {% elif session.curated_video_status == 'ready' or session.curated_video_en_status == 'ready' %}
+                    <span class="status-badge status-approved">video ready</span>
+                {% elif session.curation_status == 'ready' %}
+                    <span class="status-badge status-approved">curated</span>
+                {% elif session.video_angles_status == 'ready' %}
+                    <span class="status-badge status-reviewing">angles ready</span>
+                {% elif session.video_angles_status == 'generating' %}
+                    <span class="status-badge status-generating">analyzing</span>
+                {% elif session.video_angles_status == 'failed' %}
+                    <span class="status-badge status-failed">failed</span>
+                {% else %}
+                    <span class="status-badge status-draft">pending</span>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    {# ── Step 1: Angle Recommendation ─────────────────────────── #}
+
+    {% if session.video_angles_status == 'generating' %}
+    <div>
+        <p aria-busy="true">Analyzing report for video angles...</p>
+        <div hx-get="{{ url_for('angles_status', session_id=session.session_id) }}"
+             hx-trigger="every 5s"
+             hx-swap="none"
+             class="angles-poll"></div>
+    </div>
+
+    {% elif session.video_angles_status == 'failed' %}
+    <div>
+        <p>Angle recommendation failed.</p>
+        <button class="outline"
+                hx-post="{{ url_for('angles_recommend', session_id=session.session_id) }}"
+                hx-swap="none">
+            Retry Recommendation
+        </button>
+    </div>
+
+    {% elif session.video_angles_status == 'ready' and session.video_angles %}
+    {# ── Step 2: Angle Selection ─────────────────────────────── #}
+
+    {% if session.selected_angle_index < 0 %}
+    {# No angle selected yet — show angle cards #}
+    <p><strong>Step 1:</strong> Select a video angle</p>
+    <div class="angle-cards">
+        {% for angle in session.video_angles %}
+        <article class="angle-card" style="border-left-color: {% if loop.index0 == 0 %}#3b82f6{% elif loop.index0 == 1 %}#8b5cf6{% else %}#f59e0b{% endif %};">
+            <header style="padding-bottom: 0.5rem;">
+                <strong>{{ angle.angle_name }}</strong>
+            </header>
+            <p>{{ angle.core_thesis }}</p>
+            <p style="font-size: 0.85rem; color: var(--pico-muted-color);">{{ angle.why_this_angle }}</p>
+
+            {# Scores #}
+            {% if angle.score is defined %}
+            <div class="angle-scores" style="font-size: 0.8rem;">
+                <span title="信息增量">Info {{ angle.score.information_delta | default('-') }}</span> &middot;
+                <span title="争议张力">Tension {{ angle.score.controversy_tension | default('-') }}</span> &middot;
+                <span title="数据密度">Data {{ angle.score.data_density | default('-') }}</span> &middot;
+                <span title="叙事潜力">Narrative {{ angle.score.narrative_potential | default('-') }}</span> &middot;
+                <span title="时效相关">Timely {{ angle.score.timeliness | default('-') }}</span>
+            </div>
+            {% endif %}
+
+            {# Discussion anchors (collapsible) #}
+            {% if angle.discussion_anchors is defined and angle.discussion_anchors %}
+            <details>
+                <summary style="font-size: 0.85rem;">Discussion Anchors ({{ angle.discussion_anchors | length }})</summary>
+                <ul style="font-size: 0.8rem;">
+                    {% for a in angle.discussion_anchors %}
+                    <li>{{ a }}</li>
+                    {% endfor %}
+                </ul>
+            </details>
+            {% endif %}
+
+            {# Aha moment #}
+            {% if angle.audience_aha_moment is defined and angle.audience_aha_moment %}
+            <p style="font-size: 0.8rem; font-style: italic;">{{ angle.audience_aha_moment }}</p>
+            {% endif %}
+
+            <button class="outline btn-sm"
+                    hx-post="{{ url_for('angles_select', session_id=session.session_id) }}"
+                    hx-vals='{"angle_index": "{{ loop.index0 }}"}'
+                    hx-swap="none">
+                Select This Angle
+            </button>
+        </article>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    {# Angle selected — show selected angle info #}
+    {% set sel = session.video_angles[session.selected_angle_index] %}
+    <div class="selected-angle">
+        <strong>Selected:</strong> {{ sel.angle_name }} — {{ sel.core_thesis }}
+    </div>
+
+    {# ── Step 3: Curation ────────────────────────────────────── #}
+
+    {% if session.curation_status == 'generating' %}
+    <div style="margin-top: 1rem;">
+        <p aria-busy="true">Curating document from report...</p>
+        <div hx-get="{{ url_for('curation_status', session_id=session.session_id) }}"
+             hx-trigger="every 5s"
+             hx-swap="none"
+             class="curation-poll"></div>
+    </div>
+
+    {% elif session.curation_status == 'failed' %}
+    <div style="margin-top: 1rem;">
+        <p>Document curation failed.</p>
+        <button class="outline"
+                hx-post="{{ url_for('angles_select', session_id=session.session_id) }}"
+                hx-vals='{"angle_index": "{{ session.selected_angle_index }}"}'
+                hx-swap="none">
+            Retry Curation
+        </button>
+    </div>
+
+    {% elif session.curation_status == 'ready' and session.curated_document %}
+    {# Curated document ready #}
+    <details style="margin-top: 1rem;">
+        <summary>Curated Document ({{ session.curated_document | length }} chars)</summary>
+        <pre class="source-preview"><code>{{ session.curated_document[:5000] }}{% if session.curated_document | length > 5000 %}
+
+... ({{ session.curated_document | length - 5000 }} more chars){% endif %}</code></pre>
+    </details>
+
+    {# ── Step 4: Video Generation ─────────────────────────────── #}
+
+    {% if session.curated_video_status == 'generating' or session.curated_video_en_status == 'generating' %}
+    <div style="margin-top: 1rem;">
+        {% if session.curated_video_status == 'generating' %}
+        <p aria-busy="true">Generating Chinese video from curated document...</p>
+        {% endif %}
+        {% if session.curated_video_en_status == 'generating' %}
+        <p aria-busy="true">Generating English video with bilingual subtitles...</p>
+        {% endif %}
+        <div hx-get="{{ url_for('curated_video_status', session_id=session.session_id) }}"
+             hx-trigger="every 5s"
+             hx-swap="none"
+             class="curated-video-poll"></div>
+    </div>
+
+    {# Show any already-ready videos while the other is still generating #}
+    {% if session.curated_video_status == 'ready' and session.curated_video_path %}
+    <div class="video-section" style="margin-top: 1rem;">
+        <p><strong>Chinese Video</strong></p>
+        <video controls width="100%">
+            <source src="{{ session.curated_video_path }}" type="video/mp4">
+        </video>
+    </div>
+    {% endif %}
+    {% if session.curated_video_en_status == 'ready' and session.curated_video_en_path %}
+    <div class="video-section" style="margin-top: 1rem;">
+        <p><strong>English Video (bilingual subtitles)</strong></p>
+        <video controls width="100%">
+            <source src="{{ session.curated_video_en_path }}" type="video/mp4">
+        </video>
+    </div>
+    {% endif %}
+
+    {% elif session.curated_video_status == 'ready' or session.curated_video_en_status == 'ready' %}
+    {# At least one video is ready and none are generating #}
+    {% if session.curated_video_status == 'ready' and session.curated_video_path %}
+    <div class="video-section" style="margin-top: 1rem;">
+        <p><strong>Chinese Video</strong></p>
+        <video controls width="100%">
+            <source src="{{ session.curated_video_path }}" type="video/mp4">
+        </video>
+    </div>
+    {% endif %}
+    {% if session.curated_video_en_status == 'ready' and session.curated_video_en_path %}
+    <div class="video-section" style="margin-top: 1rem;">
+        <p><strong>English Video (bilingual subtitles)</strong></p>
+        <video controls width="100%">
+            <source src="{{ session.curated_video_en_path }}" type="video/mp4">
+        </video>
+    </div>
+    {% endif %}
+
+    {# ── Step 5: XHS Publish ──────────────────────────────────── #}
+
+    {% if session.curated_publish_status == 'publishing' %}
+    <div style="margin-top: 1rem;">
+        <p aria-busy="true">Publishing to Xiaohongshu...</p>
+        <div hx-get="{{ url_for('curated_video_publish_status', session_id=session.session_id) }}"
+             hx-trigger="every 5s"
+             hx-swap="none"
+             class="publish-poll"></div>
+    </div>
+
+    {% elif session.curated_publish_status == 'published' %}
+    <div style="margin-top: 1rem;">
+        <p style="color: #10b981; font-weight: 600;">Published to Xiaohongshu</p>
+    </div>
+
+    {% else %}
+    {# Show post editor + publish button #}
+    <div style="margin-top: 1rem;">
+        <p><strong>Step 5:</strong> Review XHS post &amp; publish</p>
+
+        {# Cover preview #}
+        <div style="margin-bottom: 1rem;">
+            <img src="/static/covers/{{ session.ticker }}_cover.jpg"
+                 alt="Cover"
+                 style="width: 180px; height: 240px; object-fit: cover; border-radius: 6px; border: 1px solid var(--pico-muted-border-color);">
+        </div>
+
+        <textarea class="content-editor"
+                  name="xhs_post"
+                  id="curated-xhs-post"
+                  rows="6"
+                  style="min-height: 120px;">{{ session.curated_xhs_post }}</textarea>
+        <div class="editor-actions">
+            <button class="outline btn-sm"
+                    hx-post="{{ url_for('curated_video_save_post', session_id=session.session_id) }}"
+                    hx-include="#curated-xhs-post"
+                    hx-swap="none">
+                Save Post
+            </button>
+            <button class="secondary btn-sm"
+                    hx-post="{{ url_for('curated_video_publish', session_id=session.session_id) }}"
+                    hx-swap="none"
+                    hx-confirm="Publish this video to Xiaohongshu?">
+                Publish to XHS
+            </button>
+            {% if session.curated_publish_status == 'failed' %}
+            <span style="color: #ef4444; font-size: 0.85rem;">Previous publish attempt failed — retry?</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% elif session.curated_video_status == 'failed' or session.curated_video_en_status == 'failed' %}
+    <div style="margin-top: 1rem;">
+        {% if session.curated_video_status == 'failed' %}
+        <p style="color: #ef4444;">Chinese video generation failed.</p>
+        {% endif %}
+        {% if session.curated_video_en_status == 'failed' %}
+        <p style="color: #ef4444;">English video generation failed.</p>
+        {% endif %}
+        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem;">
+            <label><input type="radio" name="language" value="zh" checked> 中文</label>
+            <label><input type="radio" name="language" value="en"> English</label>
+            <label><input type="radio" name="language" value="both"> Both</label>
+        </div>
+        <button class="outline"
+                hx-post="{{ url_for('curated_video_generate', session_id=session.session_id) }}"
+                hx-include="[name='language']"
+                hx-swap="none">
+            Retry Video Generation
+        </button>
+    </div>
+
+    {% else %}
+    <div style="margin-top: 1rem;">
+        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem;">
+            <label><input type="radio" name="language" value="zh" checked> 中文</label>
+            <label><input type="radio" name="language" value="en"> English</label>
+            <label><input type="radio" name="language" value="both"> Both</label>
+        </div>
+        <button class="outline" id="gen-video-btn"
+                hx-post="{{ url_for('curated_video_generate', session_id=session.session_id) }}"
+                hx-include="[name='language']"
+                hx-swap="none">
+            Generate Video
+        </button>
+    </div>
+    {% endif %}
+
+    {% else %}
+    {# Curation pending — shouldn't normally show (auto-triggered on select) #}
+    <p style="margin-top: 1rem; color: var(--pico-muted-color);">Waiting for curation to start...</p>
+    {% endif %}
+
+    {% endif %}{# end selected_angle_index check #}
+
+    {% elif session.video_angles_status == 'pending' %}
+    {# Not yet started — offer manual trigger #}
+    <div>
+        <button class="outline"
+                hx-post="{{ url_for('angles_recommend', session_id=session.session_id) }}"
+                hx-swap="none">
+            Recommend Video Angles
+        </button>
+    </div>
+    {% endif %}
+</article>

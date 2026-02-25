@@ -20,6 +20,39 @@
 <!-- Publish bar -->
 {% if session.approved_count() > 0 %}
 <div class="publish-bar">
+    {% if session.platform == 'xiaohongshu' %}
+    {# XHS dual-mode: slides + video #}
+    <button class="contrast"
+            hx-post="{{ url_for('publish_session', session_id=session.session_id) }}"
+            hx-vals='{"dry_run": "true", "publish_mode": "slides"}'
+            hx-target="#publish-result"
+            hx-swap="innerHTML">
+        Dry-Run Slides
+    </button>
+    <button class="contrast"
+            hx-post="{{ url_for('publish_session', session_id=session.session_id) }}"
+            hx-vals='{"dry_run": "true", "publish_mode": "video"}'
+            hx-target="#publish-result"
+            hx-swap="innerHTML">
+        Dry-Run Video
+    </button>
+    <button class="secondary"
+            hx-post="{{ url_for('publish_session', session_id=session.session_id) }}"
+            hx-vals='{"dry_run": "false", "publish_mode": "slides"}'
+            hx-target="#publish-result"
+            hx-swap="innerHTML"
+            hx-confirm="Publish slides for real? This will post to Xiaohongshu.">
+        Live Slides
+    </button>
+    <button class="secondary"
+            hx-post="{{ url_for('publish_session', session_id=session.session_id) }}"
+            hx-vals='{"dry_run": "false", "publish_mode": "video"}'
+            hx-target="#publish-result"
+            hx-swap="innerHTML"
+            hx-confirm="Publish video for real? This will post to Xiaohongshu.">
+        Live Video
+    </button>
+    {% else %}
     <button id="publish-btn" class="contrast"
             hx-post="{{ url_for('publish_session', session_id=session.session_id) }}"
             hx-vals='{"dry_run": "true"}'
@@ -35,9 +68,13 @@
             hx-confirm="Publish for real? This will post to {{ session.platform | title }}.">
         Publish Live
     </button>
+    {% endif %}
     <div id="publish-result"></div>
 </div>
 {% endif %}
+
+<!-- Video Curation Pipeline -->
+{% include "_video_curation_panel.html" %}
 
 <!-- Segment Cards -->
 {% for segment in session.segments %}

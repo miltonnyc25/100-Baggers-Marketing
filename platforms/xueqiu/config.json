@@ -1,8 +1,8 @@
 {
   "platform": "xueqiu",
   "language": "zh",
-  "min_chars": 2000,
-  "max_chars": 5000,
+  "min_chars": 5000,
+  "max_chars": 10000,
   "tone": "professional_investor",
   "compliance": {
     "forbidden_words": ["overvalued", "undervalued", "低估", "高估", "买入", "卖出", "目标价"],
@@ -10,5 +10,5 @@
     "attribution_prefix": "据分析"
   },
   "tags_template": "${ticker} #深度研报 #美股分析 #投资研究 #100Baggers",
-  "cta_template": "完整分析报告: https://www.100baggers.club/reports/{ticker_lower}"
+  "cta_template": "[完整分析报告链接](https://www.100baggers.club/reports/{ticker_lower})"
 }

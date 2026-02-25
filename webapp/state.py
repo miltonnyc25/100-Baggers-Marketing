@@ -31,6 +31,19 @@ class SessionState:
     segments: list[SegmentData] = field(default_factory=list)
     overall_status: str = "splitting"  # splitting|generating|reviewing|approved|published
 
+    # ── Video Curation Pipeline ───────────────────────────────────────
+    video_angles: list = field(default_factory=list)       # Gemini-recommended angle dicts
+    video_angles_status: str = "pending"                   # pending|generating|ready|failed
+    selected_angle_index: int = -1                         # User's chosen angle (-1 = none)
+    curated_document: str = ""                             # 30k+ char Gemini output
+    curation_status: str = "pending"                       # pending|generating|ready|failed
+    curated_video_path: str = ""                           # URL path to final video
+    curated_video_status: str = "pending"                  # pending|generating|ready|failed
+    curated_video_en_path: str = ""                        # English video URL path
+    curated_video_en_status: str = "pending"               # pending|generating|ready|failed
+    curated_xhs_post: str = ""                             # XHS post content (title + body)
+    curated_publish_status: str = "pending"                # pending|publishing|published|failed
+
     # ── Persistence ──────────────────────────────────────────────────
 
     def save(self) -> Path:
@@ -43,6 +56,18 @@ class SessionState:
             "created_at": self.created_at,
             "overall_status": self.overall_status,
             "segments": [s.to_dict() for s in self.segments],
+            # Video curation pipeline
+            "video_angles": self.video_angles,
+            "video_angles_status": self.video_angles_status,
+            "selected_angle_index": self.selected_angle_index,
+            "curated_document": self.curated_document,
+            "curation_status": self.curation_status,
+            "curated_video_path": self.curated_video_path,
+            "curated_video_status": self.curated_video_status,
+            "curated_video_en_path": self.curated_video_en_path,
+            "curated_video_en_status": self.curated_video_en_status,
+            "curated_xhs_post": self.curated_xhs_post,
+            "curated_publish_status": self.curated_publish_status,
         }
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         return path
@@ -61,6 +86,18 @@ class SessionState:
             created_at=data["created_at"],
             overall_status=data.get("overall_status", "reviewing"),
             segments=[SegmentData.from_dict(s) for s in data.get("segments", [])],
+            # Video curation pipeline (backward-compatible defaults)
+            video_angles=data.get("video_angles", []),
+            video_angles_status=data.get("video_angles_status", "pending"),
+            selected_angle_index=data.get("selected_angle_index", -1),
+            curated_document=data.get("curated_document", ""),
+            curation_status=data.get("curation_status", "pending"),
+            curated_video_path=data.get("curated_video_path", ""),
+            curated_video_status=data.get("curated_video_status", "pending"),
+            curated_video_en_path=data.get("curated_video_en_path", ""),
+            curated_video_en_status=data.get("curated_video_en_status", "pending"),
+            curated_xhs_post=data.get("curated_xhs_post", ""),
+            curated_publish_status=data.get("curated_publish_status", "pending"),
         )
 
     @classmethod
